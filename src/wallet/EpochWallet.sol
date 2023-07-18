@@ -12,6 +12,8 @@ import "openzeppelin/proxy/utils/UUPSUpgradeable.sol";
 import "account-abstraction/core/BaseAccount.sol";
 import "../callback/TokenCallbackHandler.sol";
 
+import "../registry/IEpochRegistry.sol";
+
 /**
  * minimal account.
  *  this is sample minimal account.
@@ -29,6 +31,7 @@ contract EpochWallet is
     address public owner;
 
     IEntryPoint private immutable _entryPoint;
+    IEpochRegistry private _epochRegistry;
 
     event EpochWalletInitialized(
         IEntryPoint indexed entryPoint,
@@ -43,6 +46,10 @@ contract EpochWallet is
     /// @inheritdoc BaseAccount
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
+    }
+
+    function epochRegistry() public view virtual returns (IEpochRegistry) {
+        return _epochRegistry;
     }
 
     // solhint-disable-next-line no-empty-blocks
@@ -74,6 +81,27 @@ contract EpochWallet is
     }
 
     /**
+     * execute a transaction from epoch protocol
+     */
+    function executeEpoch(
+        uint256 taskId,
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) external {
+        _requireFromEntryPointOrOwner();
+
+        (
+            bool _send,
+            address _dest,
+            uint256 _value,
+            bytes memory _func
+        ) = _epochRegistry.verifyTransaction(taskId, dest, value, func);
+        _requireEpochVerification(_send);
+        _call(_dest, _value, _func);
+    }
+
+    /**
      * execute a sequence of transactions
      */
     function executeBatch(
@@ -81,9 +109,32 @@ contract EpochWallet is
         bytes[] calldata func
     ) external {
         _requireFromEntryPointOrOwner();
+
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
             _call(dest[i], 0, func[i]);
+        }
+    }
+
+    /**
+     * execute a sequence of transactions from epoch protocol
+     */
+    function executeBatchEpoch(
+        uint256 taskId,
+        address[] calldata dest,
+        bytes[] calldata func
+    ) external {
+        _requireFromEntryPointOrOwner();
+        require(dest.length == func.length, "wrong array lengths");
+        (
+            bool _send,
+            address[] memory _dest,
+            bytes[] memory _func
+        ) = _epochRegistry.verifyBatchTransaction(taskId, dest, func);
+        _requireEpochVerification(_send);
+
+        for (uint256 i = 0; i < _dest.length; i++) {
+            _call(_dest[i], 0, _func[i]);
         }
     }
 
@@ -92,12 +143,19 @@ contract EpochWallet is
      * a new implementation of EpochWallet must be deployed with the new EntryPoint address, then upgrading
      * the implementation by calling `upgradeTo()`
      */
-    function initialize(address anOwner) public virtual initializer {
-        _initialize(anOwner);
+    function initialize(
+        address anOwner,
+        IEpochRegistry anEpochRegistry
+    ) public virtual initializer {
+        _initialize(anOwner, anEpochRegistry);
     }
 
-    function _initialize(address anOwner) internal virtual {
+    function _initialize(
+        address anOwner,
+        IEpochRegistry anEpochRegistry
+    ) internal virtual {
         owner = anOwner;
+        _epochRegistry = anEpochRegistry;
         emit EpochWalletInitialized(_entryPoint, owner);
     }
 
@@ -107,6 +165,11 @@ contract EpochWallet is
             msg.sender == address(entryPoint()) || msg.sender == owner,
             "account: not Owner or EntryPoint"
         );
+    }
+
+    // Require the function call went through EntryPoint or owner
+    function _requireEpochVerification(bool _send) internal pure {
+        require(_send, "account: Condition Failed");
     }
 
     /// implement template method of BaseAccount
