@@ -5,6 +5,7 @@ import "openzeppelin/utils/Create2.sol";
 import "openzeppelin/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "./EpochWallet.sol";
+import "openzeppelin/access/Ownable.sol";
 
 /**
  * A sample factory contract for SimpleAccount
@@ -12,7 +13,7 @@ import "./EpochWallet.sol";
  * The factory's createAccount returns the target account address even if it is already installed.
  * This way, the entryPoint.getSenderAddress() can be called either before or after the account is created.
  */
-contract EpochWalletFactory {
+contract EpochWalletFactory is Ownable {
     EpochWallet public immutable accountImplementation;
     IEpochRegistry public epochRegistry;
 
@@ -72,5 +73,13 @@ contract EpochWalletFactory {
                     )
                 )
             );
+    }
+
+    function updateRegistry(IEpochRegistry _registry) external onlyOwner {
+        require(
+            address(_registry) != address(0),
+            "Factory: Address must be valid"
+        );
+        epochRegistry = _registry;
     }
 }

@@ -8,7 +8,6 @@ pragma solidity ^0.8.12;
 import "openzeppelin/utils/cryptography/ECDSA.sol";
 import "openzeppelin/proxy/utils/Initializable.sol";
 import "openzeppelin/proxy/utils/UUPSUpgradeable.sol";
-
 import "account-abstraction/core/BaseAccount.sol";
 import "../callback/TokenCallbackHandler.sol";
 
@@ -31,7 +30,7 @@ contract EpochWallet is
     address public owner;
 
     IEntryPoint private immutable _entryPoint;
-    IEpochRegistry private _epochRegistry;
+    IEpochRegistry public _epochRegistry;
 
     event EpochWalletInitialized(
         IEntryPoint indexed entryPoint,
@@ -178,8 +177,8 @@ contract EpochWallet is
         bytes32 userOpHash
     ) internal virtual override returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(userOp.signature))
-            return SIG_VALIDATION_FAILED;
+        address signer = hash.recover(userOp.signature);
+        if (owner != signer) return SIG_VALIDATION_FAILED;
         return 0;
     }
 
@@ -223,5 +222,14 @@ contract EpochWallet is
     ) internal view override {
         (newImplementation);
         _onlyOwner();
+    }
+
+    function updateRegistry(IEpochRegistry _registry) external {
+        _requireFromEntryPointOrOwner();
+        require(
+            address(_registry) != address(0),
+            "Factory: Address must be valid"
+        );
+        _epochRegistry = _registry;
     }
 }

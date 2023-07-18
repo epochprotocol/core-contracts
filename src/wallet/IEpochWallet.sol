@@ -89,4 +89,6 @@ interface IEpochWallet is IAccount {
         address payable withdrawAddress,
         uint256 amount
     ) external;
+
+    function updateRegistry(IEpochRegistry _registry) external;
 }
