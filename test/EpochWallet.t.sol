@@ -3,9 +3,9 @@ pragma solidity ^0.8.12;
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 import "account-abstraction/interfaces/IEntryPoint.sol";
-import "../registry/EpochRegistry.sol";
-import "../wallet/EpochWallet.sol";
-import "../wallet/EpochWalletFactory.sol";
+import "../src/registry/EpochRegistry.sol";
+import "../src/wallet/EpochWallet.sol";
+import "../src/wallet/EpochWalletFactory.sol";
 import "account-abstraction/interfaces/UserOperation.sol";
 import "account-abstraction/test/TestUtil.sol";
 
