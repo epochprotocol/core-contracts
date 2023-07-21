@@ -56,10 +56,12 @@ contract EpochWalletTest is Test {
         uint256 taskid = 1;
         bytes memory data = abi.encode(taskid);
         address[] memory dests = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        values[0] = 1 ether;
         dests[0] = address(this);
         bytes[] memory funcs = new bytes[](1);
         funcs[0] = data;
-        wallet.executeBatchEpoch(taskid, dests, funcs);
+        wallet.executeBatchEpoch(taskid, dests, values, funcs);
         assertEq(gotFallback[taskid], true);
     }
 
@@ -151,6 +153,160 @@ contract EpochWalletTest is Test {
         assertEq(preBalance - postBalance, expectedPay);
     }
 
+    function testExecuteEpochAlteredNonce() public {
+        uint256 callGasLimit = 200000;
+        uint256 verificationGasLimit = 100000;
+        uint256 preVerificationGas = 100000;
+        uint256 actualGasPrice = tx.gasprice;
+        // uint256 taskid = 1;
+        address testUser = vm.addr(privateKey);
+
+        bytes4 selector = bytes4(
+            keccak256(
+                bytes(
+                    "executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func)"
+                )
+            )
+        );
+        bytes memory data = abi.encodeWithSelector(
+            selector,
+            1,
+            testUser,
+            1 ether,
+            new bytes(0)
+        );
+
+        // bytes memory data = abi.encode(taskid);
+
+        // vm.prank(testUser);
+        hoax(testUser, 100 ether);
+
+        EpochWallet testWallet = factory.createAccount(testUser, salt);
+        UserOperation memory userOp = UserOperation({
+            sender: address(this),
+            nonce: 4,
+            initCode: new bytes(0),
+            callData: data,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: 1 gwei,
+            maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: new bytes(0),
+            signature: new bytes(0)
+        });
+
+        TestUtil testUtil = new TestUtil();
+
+        bytes memory returnData = testUtil.packUserOp(userOp);
+
+        bytes32 userOpHash = keccak256(returnData);
+        bytes32 userOpMessageHash = userOpHash.toEthSignedMessageHash();
+
+        {
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+                privateKey,
+                userOpMessageHash
+            );
+            userOp.signature = abi.encodePacked(r, s, v);
+        }
+
+        uint256 expectedPay = actualGasPrice *
+            (callGasLimit + verificationGasLimit);
+
+        // vm.stopPrank();
+        vm.prank(adEntrypoint);
+        // hoax(adEntrypoint, 100 ether);
+        uint256 preBalance = address(testWallet).balance;
+
+        uint256 validation = testWallet.validateUserOp(
+            userOp,
+            userOpHash,
+            expectedPay
+        );
+        assertEq(validation, 0);
+        uint256 postBalance = address(testWallet).balance;
+
+        assertEq(preBalance - postBalance, expectedPay);
+    }
+
+    function testBatchExecuteEpochAlteredNonce() public {
+        uint256 callGasLimit = 200000;
+        uint256 verificationGasLimit = 100000;
+        uint256 preVerificationGas = 100000;
+        uint256 actualGasPrice = tx.gasprice;
+        // uint256 taskid = 1;
+        address testUser = vm.addr(privateKey);
+
+        bytes4 selector = bytes4(
+            keccak256(
+                bytes(
+                    "executeBatchEpoch( uint256 taskId, address[] calldata dest, uint256[] calldata value, bytes[] calldata func)"
+                )
+            )
+        );
+        bytes memory data = abi.encodeWithSelector(
+            selector,
+            1,
+            [testUser],
+            [1 ether],
+            [new bytes(0)]
+        );
+
+        // bytes memory data = abi.encode(taskid);
+
+        // vm.prank(testUser);
+        hoax(testUser, 100 ether);
+
+        EpochWallet testWallet = factory.createAccount(testUser, salt);
+        UserOperation memory userOp = UserOperation({
+            sender: address(this),
+            nonce: 4,
+            initCode: new bytes(0),
+            callData: data,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: 1 gwei,
+            maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: new bytes(0),
+            signature: new bytes(0)
+        });
+
+        TestUtil testUtil = new TestUtil();
+
+        bytes memory returnData = testUtil.packUserOp(userOp);
+
+        bytes32 userOpHash = keccak256(returnData);
+        bytes32 userOpMessageHash = userOpHash.toEthSignedMessageHash();
+
+        {
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+                privateKey,
+                userOpMessageHash
+            );
+            userOp.signature = abi.encodePacked(r, s, v);
+        }
+
+        uint256 expectedPay = actualGasPrice *
+            (callGasLimit + verificationGasLimit);
+
+        // vm.stopPrank();
+        vm.prank(adEntrypoint);
+        // hoax(adEntrypoint, 100 ether);
+        uint256 preBalance = address(testWallet).balance;
+
+        uint256 validation = testWallet.validateUserOp(
+            userOp,
+            userOpHash,
+            expectedPay
+        );
+        assertEq(validation, 0);
+        uint256 postBalance = address(testWallet).balance;
+
+        assertEq(preBalance - postBalance, expectedPay);
+    }
+
     function testValidateUserOpInvalidSignature() public {
         uint256 callGasLimit = 200000;
         uint256 verificationGasLimit = 100000;
@@ -172,6 +328,7 @@ contract EpochWalletTest is Test {
             1 ether,
             new bytes(0)
         );
+
         // bytes memory data = abi.encode(taskid);
 
         // vm.prank(testUser);

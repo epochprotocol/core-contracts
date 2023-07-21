@@ -9,6 +9,7 @@ import "openzeppelin/utils/cryptography/ECDSA.sol";
 import "openzeppelin/proxy/utils/Initializable.sol";
 import "openzeppelin/proxy/utils/UUPSUpgradeable.sol";
 import "account-abstraction/core/BaseAccount.sol";
+import {CustomUserOperationLib} from "../helpers/UserOperationHelper.sol";
 import "../callback/TokenCallbackHandler.sol";
 
 import "../registry/IEpochRegistry.sol";
@@ -26,11 +27,15 @@ contract EpochWallet is
     Initializable
 {
     using ECDSA for bytes32;
+    using CustomUserOperationLib for UserOperation;
 
     address public owner;
-
+    bytes4 private constant _EXECUTE_EPOCH_SELECTOR =
+        bytes4(uint32(0x2cd28dcb));
+    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR =
+        bytes4(uint32(0x3dcdb59d));
     IEntryPoint private immutable _entryPoint;
-    IEpochRegistry public _epochRegistry;
+    IEpochRegistry private _epochRegistry;
 
     event EpochWalletInitialized(
         IEntryPoint indexed entryPoint,
@@ -95,7 +100,7 @@ contract EpochWallet is
             address _dest,
             uint256 _value,
             bytes memory _func
-        ) = _epochRegistry.verifyTransaction(taskId, dest, value, func);
+        ) = _epochRegistry.processTransaction(taskId, dest, value, func);
         _requireEpochVerification(_send);
         _call(_dest, _value, _func);
     }
@@ -105,13 +110,14 @@ contract EpochWallet is
      */
     function executeBatch(
         address[] calldata dest,
+        uint256[] calldata values,
         bytes[] calldata func
     ) external {
         _requireFromEntryPointOrOwner();
 
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
-            _call(dest[i], 0, func[i]);
+            _call(dest[i], values[i], func[i]);
         }
     }
 
@@ -121,6 +127,7 @@ contract EpochWallet is
     function executeBatchEpoch(
         uint256 taskId,
         address[] calldata dest,
+        uint256[] calldata values,
         bytes[] calldata func
     ) external {
         _requireFromEntryPointOrOwner();
@@ -128,12 +135,13 @@ contract EpochWallet is
         (
             bool _send,
             address[] memory _dest,
+            uint256[] memory _values,
             bytes[] memory _func
-        ) = _epochRegistry.verifyBatchTransaction(taskId, dest, func);
+        ) = _epochRegistry.processBatchTransaction(taskId, dest, values, func);
         _requireEpochVerification(_send);
 
         for (uint256 i = 0; i < _dest.length; i++) {
-            _call(_dest[i], 0, _func[i]);
+            _call(_dest[i], _values[i], _func[i]);
         }
     }
 
@@ -176,10 +184,58 @@ contract EpochWallet is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal virtual override returns (uint256 validationData) {
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        address signer = hash.recover(userOp.signature);
-        if (owner != signer) return SIG_VALIDATION_FAILED;
-        return 0;
+        bytes4 selector = bytes4(userOp.callData[4:]);
+        if (
+            selector == _EXECUTE_EPOCH_SELECTOR ||
+            selector == _EXECUTE_EPOCH_BATCH_SELECTOR
+        ) {
+            bytes32 userOpHashWithoutNonce = userOp.hashWithoutNonce();
+            bytes32 hash = userOpHashWithoutNonce.toEthSignedMessageHash();
+            address signer = hash.recover(userOp.signature);
+            if (owner != signer) return SIG_VALIDATION_FAILED;
+            if (selector == _EXECUTE_EPOCH_SELECTOR) {
+                (
+                    uint256 taskId,
+                    address dest,
+                    uint256 value,
+                    bytes memory func
+                ) = abi.decode(
+                        userOp.callData[4:],
+                        (uint256, address, uint256, bytes)
+                    );
+                bool _send = _epochRegistry.verifyTransaction(
+                    taskId,
+                    dest,
+                    value,
+                    func
+                );
+                if (_send) return 0;
+                return 1;
+            } else {
+                (
+                    uint256 taskId,
+                    address[] memory dest,
+                    uint256[] memory values,
+                    bytes[] memory func
+                ) = abi.decode(
+                        userOp.callData[4:],
+                        (uint256, address[], uint256[], bytes[])
+                    );
+                bool _send = _epochRegistry.verifyBatchTransaction(
+                    taskId,
+                    dest,
+                    values,
+                    func
+                );
+                if (_send) return 0;
+                return 1;
+            }
+        } else {
+            bytes32 hash = userOpHash.toEthSignedMessageHash();
+            address signer = hash.recover(userOp.signature);
+            if (owner != signer) return SIG_VALIDATION_FAILED;
+            return 0;
+        }
     }
 
     function _call(address target, uint256 value, bytes memory data) internal {

@@ -9,15 +9,35 @@ interface IEpochRegistry {
         address dest,
         uint256 value,
         bytes calldata func
-    )
-        external
-        returns (bool _send, address _dest, uint256 _value, bytes memory _func);
+    ) external returns (bool _send);
 
     function verifyBatchTransaction(
         uint256 taskId,
         address[] calldata dest,
+        uint256[] calldata values,
+        bytes[] calldata func
+    ) external returns (bool _send);
+
+    function processTransaction(
+        uint256 taskId,
+        address dest,
+        uint256 value,
+        bytes calldata func
+    )
+        external
+        returns (bool _send, address _dest, uint256 _value, bytes memory _func);
+
+    function processBatchTransaction(
+        uint256 taskId,
+        address[] calldata dest,
+        uint256[] calldata values,
         bytes[] calldata func
     )
         external
-        returns (bool _send, address[] memory _dest, bytes[] memory _func);
+        returns (
+            bool _send,
+            address[] memory _dest,
+            uint256[] memory _values,
+            bytes[] memory _func
+        );
 }
