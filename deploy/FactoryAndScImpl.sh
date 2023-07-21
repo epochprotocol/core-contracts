@@ -1,7 +1,7 @@
 #! /bin/bash
 export $(grep -v '^#' .env | xargs)
 
-if [ -z "$REGISTERY_ADDRESS" ]
+if [ -z "$REGISTRY_ADDRESS" ]
 then
 echo "Registry address not specified...."
 

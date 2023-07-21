@@ -16,5 +16,5 @@ deployed_to_line=$(echo "$deployment_output_registry" | grep -oE 'Deployed to: (
 deployed_to_address=$(echo "$deployed_to_line" | awk '{print $3}')
 
 # Print the address (optional)
-echo "Deployed to address: $deployed_to_address"
+echo "Registry Deployed to address: $deployed_to_address"
 
