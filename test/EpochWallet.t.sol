@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
+
 import "forge-std/Test.sol";
 import "forge-std/Vm.sol";
 import "account-abstraction/interfaces/IEntryPoint.sol";
@@ -12,16 +13,15 @@ import "account-abstraction/test/TestUtil.sol";
 contract EpochWalletTest is Test {
     using UserOperationLib for UserOperation;
     using ECDSA for bytes32;
+
     EpochWallet public wallet;
     EpochWalletFactory public factory;
 
     uint256 public mainnetFork;
-    address public immutable adEntrypoint =
-        0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
+    address public immutable adEntrypoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public immutable salt = 123456;
 
-    address private immutable deployer =
-        0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+    address private immutable deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     string mnemonic;
     uint256 privateKey;
     mapping(uint256 => bool) gotFallback;
@@ -38,7 +38,8 @@ contract EpochWalletTest is Test {
         mainnetFork = vm.createFork(mainnetUrl);
         EpochRegistry registry = new EpochRegistry();
         IEntryPoint ept = IEntryPoint(adEntrypoint);
-        factory = new EpochWalletFactory(ept, registry);
+        EpochWallet walletImpl = new EpochWallet(ept);
+        factory = new EpochWalletFactory(walletImpl, registry);
         wallet = factory.createAccount(address(this), salt);
         hoax(address(wallet), 100 ether);
 
@@ -105,19 +106,8 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(
-            keccak256(
-                bytes(
-                    "execute(address dest, uint256 value, bytes calldata func)"
-                )
-            )
-        );
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            testUser,
-            1 ether,
-            new bytes(0)
-        );
+        bytes4 selector = bytes4(keccak256(bytes("execute(address dest, uint256 value, bytes calldata func)")));
+        bytes memory data = abi.encodeWithSelector(selector, testUser, 1 ether, new bytes(0));
         // bytes memory data = abi.encode(taskid);
 
         // vm.prank(testUser);
@@ -146,26 +136,18 @@ contract EpochWalletTest is Test {
         bytes32 userOpMessageHash = userOpHash.toEthSignedMessageHash();
 
         {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-                privateKey,
-                userOpMessageHash
-            );
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, userOpMessageHash);
             userOp.signature = abi.encodePacked(r, s, v);
         }
 
-        uint256 expectedPay = actualGasPrice *
-            (callGasLimit + verificationGasLimit);
+        uint256 expectedPay = actualGasPrice * (callGasLimit + verificationGasLimit);
 
         // vm.stopPrank();
         vm.prank(adEntrypoint);
         // hoax(adEntrypoint, 100 ether);
         uint256 preBalance = address(testWallet).balance;
 
-        uint256 validation = testWallet.validateUserOp(
-            userOp,
-            userOpHash,
-            expectedPay
-        );
+        uint256 validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
         assertEq(validation, 0);
         uint256 postBalance = address(testWallet).balance;
 
@@ -180,20 +162,9 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(
-            keccak256(
-                bytes(
-                    "executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func)"
-                )
-            )
-        );
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            1,
-            testUser,
-            1 ether,
-            new bytes(0)
-        );
+        bytes4 selector =
+            bytes4(keccak256(bytes("executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func)")));
+        bytes memory data = abi.encodeWithSelector(selector, 1, testUser, 1 ether, new bytes(0));
 
         // bytes memory data = abi.encode(taskid);
 
@@ -223,26 +194,18 @@ contract EpochWalletTest is Test {
         bytes32 userOpMessageHash = userOpHash.toEthSignedMessageHash();
 
         {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-                privateKey,
-                userOpMessageHash
-            );
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, userOpMessageHash);
             userOp.signature = abi.encodePacked(r, s, v);
         }
 
-        uint256 expectedPay = actualGasPrice *
-            (callGasLimit + verificationGasLimit);
+        uint256 expectedPay = actualGasPrice * (callGasLimit + verificationGasLimit);
 
         // vm.stopPrank();
         vm.prank(adEntrypoint);
         // hoax(adEntrypoint, 100 ether);
         uint256 preBalance = address(testWallet).balance;
 
-        uint256 validation = testWallet.validateUserOp(
-            userOp,
-            userOpHash,
-            expectedPay
-        );
+        uint256 validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
         assertEq(validation, 0);
         uint256 postBalance = address(testWallet).balance;
 
@@ -264,13 +227,7 @@ contract EpochWalletTest is Test {
                 )
             )
         );
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            1,
-            [testUser],
-            [1 ether],
-            [new bytes(0)]
-        );
+        bytes memory data = abi.encodeWithSelector(selector, 1, [testUser], [1 ether], [new bytes(0)]);
 
         // bytes memory data = abi.encode(taskid);
 
@@ -300,26 +257,18 @@ contract EpochWalletTest is Test {
         bytes32 userOpMessageHash = userOpHash.toEthSignedMessageHash();
 
         {
-            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-                privateKey,
-                userOpMessageHash
-            );
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, userOpMessageHash);
             userOp.signature = abi.encodePacked(r, s, v);
         }
 
-        uint256 expectedPay = actualGasPrice *
-            (callGasLimit + verificationGasLimit);
+        uint256 expectedPay = actualGasPrice * (callGasLimit + verificationGasLimit);
 
         // vm.stopPrank();
         vm.prank(adEntrypoint);
         // hoax(adEntrypoint, 100 ether);
         uint256 preBalance = address(testWallet).balance;
 
-        uint256 validation = testWallet.validateUserOp(
-            userOp,
-            userOpHash,
-            expectedPay
-        );
+        uint256 validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
         assertEq(validation, 0);
         uint256 postBalance = address(testWallet).balance;
 
@@ -334,19 +283,8 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(
-            keccak256(
-                bytes(
-                    "execute(address dest, uint256 value, bytes calldata func)"
-                )
-            )
-        );
-        bytes memory data = abi.encodeWithSelector(
-            selector,
-            testUser,
-            1 ether,
-            new bytes(0)
-        );
+        bytes4 selector = bytes4(keccak256(bytes("execute(address dest, uint256 value, bytes calldata func)")));
+        bytes memory data = abi.encodeWithSelector(selector, testUser, 1 ether, new bytes(0));
 
         // bytes memory data = abi.encode(taskid);
 
@@ -384,18 +322,13 @@ contract EpochWalletTest is Test {
             userOp.signature = abi.encodePacked(r, s, v);
         }
 
-        uint256 expectedPay = actualGasPrice *
-            (callGasLimit + verificationGasLimit);
+        uint256 expectedPay = actualGasPrice * (callGasLimit + verificationGasLimit);
 
         // vm.stopPrank();
         vm.prank(adEntrypoint);
         // hoax(adEntrypoint, 100 ether);
 
-        uint256 validation = testWallet.validateUserOp(
-            userOp,
-            userOpHash,
-            expectedPay
-        );
+        uint256 validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
         assertEq(validation, 1);
     }
 }
