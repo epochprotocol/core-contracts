@@ -55,14 +55,33 @@ contract EpochWalletTest is Test {
     function testExecuteEpochBatch() public {
         uint256 taskid = 1;
         bytes memory data = abi.encode(taskid);
-        address[] memory dests = new address[](1);
-        uint256[] memory values = new uint256[](1);
+        address[] memory dests = new address[](2);
+        uint256[] memory values = new uint256[](2);
         values[0] = 1 ether;
         dests[0] = address(this);
-        bytes[] memory funcs = new bytes[](1);
+        values[1] = 0;
+        dests[1] = address(this);
+        bytes[] memory funcs = new bytes[](2);
         funcs[0] = data;
+        funcs[1] = data;
         wallet.executeBatchEpoch(taskid, dests, values, funcs);
         assertEq(gotFallback[taskid], true);
+    }
+
+    function testFailExecuteEpochBatch() public {
+        uint256 taskid = 1;
+        uint256 balance = address(wallet).balance;
+        bytes memory data = abi.encode(taskid);
+        address[] memory dests = new address[](2);
+        uint256[] memory values = new uint256[](2);
+        values[0] = balance - 200 gwei;
+        dests[0] = address(this);
+        values[1] = 1 ether;
+        dests[1] = address(this);
+        bytes[] memory funcs = new bytes[](2);
+        funcs[0] = data;
+        funcs[1] = data;
+        wallet.executeBatchEpoch(taskid, dests, values, funcs);
     }
 
     function testTransfer() public {
