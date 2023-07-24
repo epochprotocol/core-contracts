@@ -88,15 +88,26 @@ contract ByteManipulationLibraryTest is Test {
         assertEq(addressArray, outputArray);
     }
 
-    function extractFixedSizedData(bytes calldata data, uint8 position) public pure returns (bytes memory) {
+    function testOverwritesStaticData() public {
+        addressArray.push(address(this));
+        addressArray.push(address(this));
+
+        bytes memory testData = abi.encode(1, "abcd", addressArray, 69);
+        bytes32 dataToOverwrite = bytes32(abi.encode(2));
+        bytes memory updateData = this.overwriteFixedLengthData(testData, dataToOverwrite, 2);
+        (,, uint8 third,) = abi.decode(updateData, (uint8, string, uint8, uint8));
+        assertEq(third, 2);
+    }
+
+    function extractFixedSizedData(bytes calldata data, uint32 position) public pure returns (bytes memory) {
         return data.getFixedData(position);
     }
 
-    function extractDynamicData(bytes calldata data, uint8 position) public pure returns (bytes memory) {
+    function extractDynamicData(bytes calldata data, uint32 position) public pure returns (bytes memory) {
         return data.getDynamicData(position);
     }
 
-    function extractFixedSizeDynamicArrayData(bytes calldata data, uint8 position)
+    function extractFixedSizeDynamicArrayData(bytes calldata data, uint32 position)
         public
         pure
         returns (bytes[] memory)
@@ -104,7 +115,7 @@ contract ByteManipulationLibraryTest is Test {
         return data.getFixedSizeDynamicArrayData(position);
     }
 
-    function extractDynamicSizeDynamicArrayData(bytes calldata data, uint8 position)
+    function extractDynamicSizeDynamicArrayData(bytes calldata data, uint32 position)
         public
         pure
         returns (bytes[] memory)
@@ -112,8 +123,16 @@ contract ByteManipulationLibraryTest is Test {
         return data.getDynamicSizeDynamicArrayData(position);
     }
 
-    function extractStaticDataArrayData(bytes calldata data, uint8 position) public pure returns (bytes[] memory) {
+    function extractStaticDataArrayData(bytes calldata data, uint32 position) public pure returns (bytes[] memory) {
         return data.getStaticArrayData(position);
+    }
+
+    function overwriteFixedLengthData(bytes calldata data, bytes32 dataToOverwrite, uint32 position)
+        public
+        pure
+        returns (bytes memory)
+    {
+        return data.overwriteStaticData(dataToOverwrite, position);
     }
 
     function bytesToAddress(bytes memory bys) private pure returns (address addr) {
