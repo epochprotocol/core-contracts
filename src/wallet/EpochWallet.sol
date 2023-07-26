@@ -20,27 +20,17 @@ import "../registry/IEpochRegistry.sol";
  *  has execute, eth handling methods
  *  has a single signer that can send requests through the entryPoint.
  */
-contract EpochWallet is
-    BaseAccount,
-    TokenCallbackHandler,
-    UUPSUpgradeable,
-    Initializable
-{
+contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Initializable {
     using ECDSA for bytes32;
     using CustomUserOperationLib for UserOperation;
 
     address public owner;
-    bytes4 private constant _EXECUTE_EPOCH_SELECTOR =
-        bytes4(uint32(0x2cd28dcb));
-    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR =
-        bytes4(uint32(0x3dcdb59d));
+    bytes4 private constant _EXECUTE_EPOCH_SELECTOR = bytes4(uint32(0x2cd28dcb));
+    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR = bytes4(uint32(0x3dcdb59d));
     IEntryPoint private immutable _entryPoint;
     IEpochRegistry private _epochRegistry;
 
-    event EpochWalletInitialized(
-        IEntryPoint indexed entryPoint,
-        address indexed owner
-    );
+    event EpochWalletInitialized(IEntryPoint indexed entryPoint, address indexed owner);
 
     modifier onlyOwner() {
         _onlyOwner();
@@ -66,20 +56,13 @@ contract EpochWallet is
 
     function _onlyOwner() internal view {
         //directly from EOA owner, or through the account itself (which gets redirected through execute())
-        require(
-            msg.sender == owner || msg.sender == address(this),
-            "only owner"
-        );
+        require(msg.sender == owner || msg.sender == address(this), "only owner");
     }
 
     /**
      * execute a transaction (called directly from owner, or by entryPoint)
      */
-    function execute(
-        address dest,
-        uint256 value,
-        bytes calldata func
-    ) external {
+    function execute(address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
@@ -87,20 +70,11 @@ contract EpochWallet is
     /**
      * execute a transaction from epoch protocol
      */
-    function executeEpoch(
-        uint256 taskId,
-        address dest,
-        uint256 value,
-        bytes calldata func
-    ) external {
+    function executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
 
-        (
-            bool _send,
-            address _dest,
-            uint256 _value,
-            bytes memory _func
-        ) = _epochRegistry.processTransaction(taskId, dest, value, func);
+        (bool _send, address _dest, uint256 _value, bytes memory _func) =
+            _epochRegistry.processTransaction(taskId, dest, value, func);
         _requireEpochVerification(_send);
         _call(_dest, _value, _func);
     }
@@ -108,11 +82,7 @@ contract EpochWallet is
     /**
      * execute a sequence of transactions
      */
-    function executeBatch(
-        address[] calldata dest,
-        uint256[] calldata values,
-        bytes[] calldata func
-    ) external {
+    function executeBatch(address[] calldata dest, uint256[] calldata values, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
 
         require(dest.length == func.length, "wrong array lengths");
@@ -132,12 +102,8 @@ contract EpochWallet is
     ) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
-        (
-            bool _send,
-            address[] memory _dest,
-            uint256[] memory _values,
-            bytes[] memory _func
-        ) = _epochRegistry.processBatchTransaction(taskId, dest, values, func);
+        (bool _send, address[] memory _dest, uint256[] memory _values, bytes[] memory _func) =
+            _epochRegistry.processBatchTransaction(taskId, dest, values, func);
         _requireEpochVerification(_send);
 
         for (uint256 i = 0; i < _dest.length; i++) {
@@ -150,17 +116,11 @@ contract EpochWallet is
      * a new implementation of EpochWallet must be deployed with the new EntryPoint address, then upgrading
      * the implementation by calling `upgradeTo()`
      */
-    function initialize(
-        address anOwner,
-        IEpochRegistry anEpochRegistry
-    ) public virtual initializer {
+    function initialize(address anOwner, IEpochRegistry anEpochRegistry) public virtual initializer {
         _initialize(anOwner, anEpochRegistry);
     }
 
-    function _initialize(
-        address anOwner,
-        IEpochRegistry anEpochRegistry
-    ) internal virtual {
+    function _initialize(address anOwner, IEpochRegistry anEpochRegistry) internal virtual {
         owner = anOwner;
         _epochRegistry = anEpochRegistry;
         emit EpochWalletInitialized(_entryPoint, owner);
@@ -168,10 +128,7 @@ contract EpochWallet is
 
     // Require the function call went through EntryPoint or owner
     function _requireFromEntryPointOrOwner() internal view {
-        require(
-            msg.sender == address(entryPoint()) || msg.sender == owner,
-            "account: not Owner or EntryPoint"
-        );
+        require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
     // Require the function call went through EntryPoint or owner
@@ -180,56 +137,27 @@ contract EpochWallet is
     }
 
     /// implement template method of BaseAccount
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual override returns (uint256 validationData) {
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+        internal
+        virtual
+        override
+        returns (uint256 validationData)
+    {
         bytes4 selector = bytes4(userOp.callData[4:]);
-        if (
-            selector == _EXECUTE_EPOCH_SELECTOR ||
-            selector == _EXECUTE_EPOCH_BATCH_SELECTOR
-        ) {
+        if (selector == _EXECUTE_EPOCH_SELECTOR || selector == _EXECUTE_EPOCH_BATCH_SELECTOR) {
             bytes32 userOpHashWithoutNonce = userOp.hashWithoutNonce();
             bytes32 hash = userOpHashWithoutNonce.toEthSignedMessageHash();
             address signer = hash.recover(userOp.signature);
             if (owner != signer) return SIG_VALIDATION_FAILED;
+            uint256 taskId;
             if (selector == _EXECUTE_EPOCH_SELECTOR) {
-                (
-                    uint256 taskId,
-                    address dest,
-                    uint256 value,
-                    bytes memory func
-                ) = abi.decode(
-                        userOp.callData[4:],
-                        (uint256, address, uint256, bytes)
-                    );
-                bool _send = _epochRegistry.verifyTransaction(
-                    taskId,
-                    dest,
-                    value,
-                    func
-                );
-                if (_send) return 0;
-                return 1;
+                (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address, uint256, bytes));
             } else {
-                (
-                    uint256 taskId,
-                    address[] memory dest,
-                    uint256[] memory values,
-                    bytes[] memory func
-                ) = abi.decode(
-                        userOp.callData[4:],
-                        (uint256, address[], uint256[], bytes[])
-                    );
-                bool _send = _epochRegistry.verifyBatchTransaction(
-                    taskId,
-                    dest,
-                    values,
-                    func
-                );
-                if (_send) return 0;
-                return 1;
+                (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address[], uint256[], bytes[]));
             }
+            bool _send = _epochRegistry.verifyTransaction(taskId, userOp);
+            if (_send) return 0;
+            return 1;
         } else {
             bytes32 hash = userOpHash.toEthSignedMessageHash();
             address signer = hash.recover(userOp.signature);
@@ -266,26 +194,18 @@ contract EpochWallet is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(
-        address payable withdrawAddress,
-        uint256 amount
-    ) public onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
-    function _authorizeUpgrade(
-        address newImplementation
-    ) internal view override {
+    function _authorizeUpgrade(address newImplementation) internal view override {
         (newImplementation);
         _onlyOwner();
     }
 
     function updateRegistry(IEpochRegistry _registry) external {
         _requireFromEntryPointOrOwner();
-        require(
-            address(_registry) != address(0),
-            "Factory: Address must be valid"
-        );
+        require(address(_registry) != address(0), "Factory: Address must be valid");
         _epochRegistry = _registry;
     }
 }
