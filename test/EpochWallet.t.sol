@@ -283,7 +283,7 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(keccak256(bytes("execute(address dest, uint256 value, bytes calldata func)")));
+        bytes4 selector = bytes4(keccak256(bytes("execute(address, uint256, bytes)")));
         bytes memory data = abi.encodeWithSelector(selector, testUser, 1 ether, new bytes(0));
 
         // bytes memory data = abi.encode(taskid);

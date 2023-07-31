@@ -2,6 +2,7 @@
 pragma solidity ^0.8.12;
 
 import "../helpers/UserOperationHelper.sol";
+import "./IConditionChecker.sol";
 
 interface IEpochRegistry {
     enum DataType {
@@ -50,9 +51,10 @@ interface IEpochRegistry {
         bool useOnChainCondition;
         uint32 dataPosition;
         address dataSource;
+        IConditionChecker conditionChecker;
         DataType dataType;
-        bytes encodedCallData;
         bytes encodedQuery;
+        bytes encodedCondition;
     }
 
     struct DataSource {

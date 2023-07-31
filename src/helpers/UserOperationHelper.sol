@@ -11,9 +11,7 @@ import "account-abstraction/interfaces/UserOperation.sol";
  * Utility functions helpful when working with UserOperation structs.
  */
 library CustomUserOperationLib {
-    function getSender(
-        UserOperation calldata userOp
-    ) internal pure returns (address) {
+    function getSender(UserOperation calldata userOp) internal pure returns (address) {
         address data;
         //read sender from userOp, which is first userOp member (saves 800 gas...)
         assembly {
@@ -24,9 +22,7 @@ library CustomUserOperationLib {
 
     //relayer/block builder might submit the TX with higher priorityFee, but the user should not
     // pay above what he signed for.
-    function gasPrice(
-        UserOperation calldata userOp
-    ) internal view returns (uint256) {
+    function gasPrice(UserOperation calldata userOp) internal view returns (uint256) {
         unchecked {
             uint256 maxFeePerGas = userOp.maxFeePerGas;
             uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
@@ -38,9 +34,7 @@ library CustomUserOperationLib {
         }
     }
 
-    function pack(
-        UserOperation calldata userOp
-    ) internal pure returns (bytes memory ret) {
+    function pack(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
         address sender = getSender(userOp);
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
@@ -52,24 +46,21 @@ library CustomUserOperationLib {
         uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
-        return
-            abi.encode(
-                sender,
-                nonce,
-                hashInitCode,
-                hashCallData,
-                callGasLimit,
-                verificationGasLimit,
-                preVerificationGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                hashPaymasterAndData
-            );
+        return abi.encode(
+            sender,
+            nonce,
+            hashInitCode,
+            hashCallData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            hashPaymasterAndData
+        );
     }
 
-    function packWithoutNonce(
-        UserOperation calldata userOp
-    ) internal pure returns (bytes memory ret) {
+    function packWithoutNonce(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
         address sender = getSender(userOp);
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
         bytes32 hashCallData = calldataKeccak(userOp.callData);
@@ -80,29 +71,24 @@ library CustomUserOperationLib {
         uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
         bytes32 hashPaymasterAndData = calldataKeccak(userOp.paymasterAndData);
 
-        return
-            abi.encode(
-                sender,
-                hashInitCode,
-                hashCallData,
-                callGasLimit,
-                verificationGasLimit,
-                preVerificationGas,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                hashPaymasterAndData
-            );
+        return abi.encode(
+            sender,
+            hashInitCode,
+            hashCallData,
+            callGasLimit,
+            verificationGasLimit,
+            preVerificationGas,
+            maxFeePerGas,
+            maxPriorityFeePerGas,
+            hashPaymasterAndData
+        );
     }
 
-    function hash(
-        UserOperation calldata userOp
-    ) internal pure returns (bytes32) {
+    function hash(UserOperation calldata userOp) internal pure returns (bytes32) {
         return keccak256(pack(userOp));
     }
 
-    function hashWithoutNonce(
-        UserOperation calldata userOp
-    ) internal pure returns (bytes32) {
+    function hashWithoutNonce(UserOperation calldata userOp) internal pure returns (bytes32) {
         return keccak256(packWithoutNonce(userOp));
     }
 

@@ -11,7 +11,7 @@ import "openzeppelin/proxy/utils/UUPSUpgradeable.sol";
 import "account-abstraction/core/BaseAccount.sol";
 import {CustomUserOperationLib} from "../helpers/UserOperationHelper.sol";
 import "../callback/TokenCallbackHandler.sol";
-
+import "forge-std/console2.sol";
 import "../registry/IEpochRegistry.sol";
 
 /**
@@ -25,8 +25,8 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     using CustomUserOperationLib for UserOperation;
 
     address public owner;
-    bytes4 private constant _EXECUTE_EPOCH_SELECTOR = bytes4(uint32(0x2cd28dcb));
-    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR = bytes4(uint32(0x3dcdb59d));
+    bytes4 private constant _EXECUTE_EPOCH_SELECTOR = bytes4(uint32(0x0b1aee18));
+    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR = bytes4(uint32(0xa42d15f4));
     IEntryPoint private immutable _entryPoint;
     IEpochRegistry private _epochRegistry;
 
@@ -143,19 +143,30 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         override
         returns (uint256 validationData)
     {
-        bytes4 selector = bytes4(userOp.callData[4:]);
+        bytes4 selector = bytes4(userOp.callData[:4]);
+        console2.logBytes4(selector);
+
         if (selector == _EXECUTE_EPOCH_SELECTOR || selector == _EXECUTE_EPOCH_BATCH_SELECTOR) {
+            console2.logString("Inside Epoch Selector");
+
             bytes32 userOpHashWithoutNonce = userOp.hashWithoutNonce();
+            console2.logString("Hash without nonce");
+            console2.logBytes32(userOpHashWithoutNonce);
             bytes32 hash = userOpHashWithoutNonce.toEthSignedMessageHash();
             address signer = hash.recover(userOp.signature);
+            console2.log("Signer", signer);
             if (owner != signer) return SIG_VALIDATION_FAILED;
             uint256 taskId;
             if (selector == _EXECUTE_EPOCH_SELECTOR) {
                 (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address, uint256, bytes));
             } else {
+                console2.logString("Inside Batch");
+                console2.logBytes(userOp.callData[4:]);
                 (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address[], uint256[], bytes[]));
+                console2.log(taskId);
             }
             bool _send = _epochRegistry.verifyTransaction(taskId, userOp);
+            console2.log("_send", _send);
             if (_send) return 0;
             return 1;
         } else {
