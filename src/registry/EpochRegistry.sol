@@ -7,10 +7,12 @@ import "../wallet/IEpochWallet.sol";
 import "./IConditionChecker.sol";
 import "openzeppelin/utils/cryptography/ECDSA.sol";
 import "forge-std/console2.sol";
+import "encoded-data-manipulation-lib/ByteManipulationLibrary.sol";
 
 contract EpochRegistry is IEpochRegistry {
     using ECDSA for bytes32;
     using CustomUserOperationLib for UserOperation;
+    using ByteManipulationLibrary for bytes;
 
     bytes4 private constant _EXECUTE_EPOCH_SELECTOR = bytes4(uint32(0x0b1aee18));
     bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR = bytes4(uint32(0xa42d15f4));
@@ -120,13 +122,26 @@ contract EpochRegistry is IEpochRegistry {
         external
         returns (bool _send, address _dest, uint256 _value, bytes memory _func)
     {
+        Task memory task = taskMapping[taskId];
+        _func = func;
+
+        if (task.dataSourceId != 0) {
+            DataSource memory dataSource = dataSourceMapping[task.dataSourceId];
+            _func = _fetchData(dataSource, _func);
+        }
         _send = true;
         _dest = dest;
         _value = value;
-        _func = func;
         //updated taskID here
 
         taskStatus[taskId] = true;
+    }
+
+    function _fetchData(DataSource memory dataSource, bytes memory _func) internal returns (bytes memory) {
+        (bool status, bytes memory response) = dataSource.dataSource.call(dataSource.encodedQuery);
+        require(status, "Registry: data fetch failed");
+        bytes32 dataToOverwrite = response.getFixedData(dataSource.dataPosition);
+        return _func.overwriteStaticData(dataSource.positionInCallData);
     }
 
     function processBatchTransaction(
