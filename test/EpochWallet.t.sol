@@ -73,7 +73,6 @@ contract EpochWalletTest is Test {
             dataPosition: 0,
             positionInCallData: 0,
             dataSource: address(0),
-            dataType: IEpochRegistry.StaticDataType.UINT,
             encodedQuery: new bytes(0)
         });
 
@@ -111,7 +110,6 @@ contract EpochWalletTest is Test {
             dataPosition: 0,
             positionInCallData: 0,
             dataSource: address(0),
-            dataType: IEpochRegistry.StaticDataType.UINT,
             encodedQuery: new bytes(0)
         });
 
@@ -171,7 +169,7 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(keccak256(bytes("execute(address dest, uint256 value, bytes calldata func)")));
+        bytes4 selector = bytes4(keccak256(bytes("execute(address,uint256,bytes)")));
         bytes memory data = abi.encodeWithSelector(selector, testUser, 1 ether, new bytes(0));
         // bytes memory data = abi.encode(taskid);
 
@@ -227,8 +225,7 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector =
-            bytes4(keccak256(bytes("executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func)")));
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256,address,uint256,bytes)")));
         bytes memory data = abi.encodeWithSelector(selector, 1, testUser, 1 ether, new bytes(0));
 
         // bytes memory data = abi.encode(taskid);
@@ -285,13 +282,7 @@ contract EpochWalletTest is Test {
         // uint256 taskid = 1;
         address testUser = vm.addr(privateKey);
 
-        bytes4 selector = bytes4(
-            keccak256(
-                bytes(
-                    "executeBatchEpoch( uint256 taskId, address[] calldata dest, uint256[] calldata value, bytes[] calldata func)"
-                )
-            )
-        );
+        bytes4 selector = bytes4(keccak256(bytes("executeBatchEpoch(uint256,address[],uint256[],bytes[])")));
         bytes memory data = abi.encodeWithSelector(selector, 1, [testUser], [1 ether], [new bytes(0)]);
 
         // bytes memory data = abi.encode(taskid);

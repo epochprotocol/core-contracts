@@ -42,6 +42,7 @@ contract EpochRegistry is IEpochRegistry {
         );
         if (isBatchTransaction) {
             require(destinations.length > 0, "Registry: Batch Transactions need destinations");
+            require(dataSource.useDataSource == false, "Registry: batch transactions can not use external data source");
         } else {
             require(destination != address(0), "Registry: Invalid destination");
         }
@@ -143,7 +144,9 @@ contract EpochRegistry is IEpochRegistry {
         (bool status, bytes memory response) = dataSource.dataSource.call(dataSource.encodedQuery);
         require(status, "Registry: data fetch failed");
         bytes32 dataToOverwrite = response.getFixedData(dataSource.dataPosition);
-        return _func.overwriteStaticData(dataToOverwrite, dataSource.positionInCallData);
+        bytes memory overwrittenData =
+            _func.overwriteStaticDataWithSignature(dataToOverwrite, dataSource.positionInCallData);
+        return overwrittenData;
     }
 
     function processBatchTransaction(

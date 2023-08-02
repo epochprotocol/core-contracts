@@ -22,11 +22,6 @@ interface IEpochRegistry {
         BOOL_STATIC_ARRAY,
         BOOL_DYNAMIC_ARRAY
     }
-    enum StaticDataType {
-        ADDRESS,
-        UINT,
-        BOOL
-    }
 
     struct Task {
         uint256 taskId;
@@ -62,7 +57,6 @@ interface IEpochRegistry {
         uint32 dataPosition;
         uint32 positionInCallData;
         address dataSource;
-        StaticDataType dataType;
         bytes encodedQuery;
     }
 

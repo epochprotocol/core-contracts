@@ -30,6 +30,8 @@ contract EpochRegistryTest is Test {
     uint256 privateKey;
     address customAddress;
     mapping(uint256 => bool) gotFallback;
+    mapping(uint256 => uint256) gotTestCall;
+
     address[] destinations;
     uint256[] values;
     bytes[] datas;
@@ -54,6 +56,10 @@ contract EpochRegistryTest is Test {
         wallet = factory.createAccount(customAddress, salt);
         hoax(address(wallet), 100 ether);
         // vm.prank(customAddress);
+    }
+
+    function dummyCall(uint256 taskId, uint256 testNumber) external {
+        gotTestCall[taskId] = testNumber;
     }
 
     function testAddTask() external {
@@ -82,7 +88,6 @@ contract EpochRegistryTest is Test {
             dataPosition: 0,
             positionInCallData: 0,
             dataSource: address(0),
-            dataType: IEpochRegistry.StaticDataType.UINT,
             encodedQuery: new bytes(0)
         });
 
@@ -143,14 +148,12 @@ contract EpochRegistryTest is Test {
                 uint32 __dataPosition,
                 uint32 _positionInCallData,
                 address __dataSource,
-                IEpochRegistry.StaticDataType __dataType,
                 bytes memory __encodedQuery
             ) = registry.dataSourceMapping(_dataSourceId);
             assertEq(_useDataSource, false);
             assertEq(__dataPosition, 0);
             assertEq(_positionInCallData, 0);
             assertEq(__dataSource, address(0));
-            assertEq(uint256(__dataType), uint256(IEpochRegistry.DataType.STRING));
             assertEq(__encodedQuery, new bytes(0));
         }
     }
@@ -181,7 +184,6 @@ contract EpochRegistryTest is Test {
             dataPosition: 0,
             positionInCallData: 0,
             dataSource: address(0),
-            dataType: IEpochRegistry.StaticDataType.UINT,
             encodedQuery: new bytes(0)
         });
 
@@ -194,7 +196,7 @@ contract EpochRegistryTest is Test {
         uint256 callGasLimit = 200000;
         uint256 verificationGasLimit = 100000;
         uint256 preVerificationGas = 100000;
-        bytes4 selector = bytes4(keccak256(bytes("executeBatchEpoch(uint256, address[], uint256[], bytes[])")));
+        bytes4 selector = bytes4(keccak256(bytes("executeBatchEpoch(uint256,address[],uint256[],bytes[])")));
         values = [1 ether];
         datas = [new bytes(0)];
         bytes memory data = abi.encodeWithSelector(selector, taskId, destinations, values, datas);
@@ -246,7 +248,6 @@ contract EpochRegistryTest is Test {
             dataPosition: 0,
             positionInCallData: 0,
             dataSource: address(0),
-            dataType: IEpochRegistry.StaticDataType.UINT,
             encodedQuery: new bytes(0)
         });
 
@@ -258,7 +259,7 @@ contract EpochRegistryTest is Test {
         uint256 callGasLimit = 200000;
         uint256 verificationGasLimit = 100000;
         uint256 preVerificationGas = 100000;
-        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256,address,uint256,bytes)")));
 
         bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
         UserOperation memory userOp = UserOperation({
@@ -314,7 +315,6 @@ contract EpochRegistryTest is Test {
                 dataPosition: 0,
                 positionInCallData: 0,
                 dataSource: address(0),
-                dataType: IEpochRegistry.StaticDataType.UINT,
                 encodedQuery: new bytes(0)
             });
 
@@ -327,7 +327,7 @@ contract EpochRegistryTest is Test {
         uint256 callGasLimit = 200000;
         uint256 verificationGasLimit = 100000;
         uint256 preVerificationGas = 100000;
-        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256,address,uint256,bytes)")));
         bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
         UserOperation memory userOp = UserOperation({
             sender: customAddress,
@@ -379,13 +379,13 @@ contract EpochRegistryTest is Test {
                 encodedQuery: encodedQuery,
                 encodedCondition: new bytes(0)
             });
+
             IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
-                useDataSource: false,
+                useDataSource: true,
                 dataPosition: 0,
-                positionInCallData: 0,
-                dataSource: address(0),
-                dataType: IEpochRegistry.StaticDataType.UINT,
-                encodedQuery: new bytes(0)
+                positionInCallData: 1,
+                dataSource: address(testUtil),
+                encodedQuery: encodedQuery
             });
 
             vm.prank(address(wallet));
@@ -397,8 +397,12 @@ contract EpochRegistryTest is Test {
         uint256 callGasLimit = 200000;
         uint256 verificationGasLimit = 100000;
         uint256 preVerificationGas = 100000;
-        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
-        bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256,address,uint256,bytes)")));
+        bytes4 selectorDummyCall = bytes4(keccak256(bytes("dummyCall(uint256,uint256)")));
+
+        bytes memory dummyCallData = abi.encodeWithSelector(selectorDummyCall, taskId, 69);
+        bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 0, dummyCallData);
+
         UserOperation memory userOp = UserOperation({
             sender: customAddress,
             nonce: 20,
@@ -416,10 +420,51 @@ contract EpochRegistryTest is Test {
         {
             this.executeAsCallData(userOp);
             vm.prank(adEntrypoint);
-            uint256 previousBalance = address(this).balance;
-            wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
-            uint256 balancePostExecution = address(this).balance;
-            assertEq(previousBalance + 1 ether, balancePostExecution);
+            wallet.executeEpoch(taskId, address(this), 0, dummyCallData);
+        }
+        assertEq(gotTestCall[taskId], 1);
+    }
+
+    function testFailValidateAndProcessBatchTransactioWithOnChainDataSource() external {
+        // initializing task
+        uint256 taskId;
+        address destination = address(this);
+        {
+            bool isBatchTransaction = true;
+            IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+                useExecutionWindow: false,
+                recurring: true,
+                recurrenceGap: 10000,
+                executionWindowStart: 0,
+                executionWindowEnd: 100000000
+            });
+            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyData testUtil = new DummyData();
+            bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
+            bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
+            IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+                useOnChainCondition: true,
+                conditionChecker: IConditionChecker(address(equalityChecker)),
+                dataPosition: 0,
+                dataSource: address(testUtil),
+                dataType: IEpochRegistry.DataType.UINT,
+                encodedQuery: encodedQuery,
+                encodedCondition: new bytes(0)
+            });
+
+            IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+                useDataSource: true,
+                dataPosition: 0,
+                positionInCallData: 1,
+                dataSource: address(testUtil),
+                encodedQuery: encodedQuery
+            });
+
+            vm.prank(address(wallet));
+
+            taskId = registry.addTask(
+                destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+            );
         }
     }
 
