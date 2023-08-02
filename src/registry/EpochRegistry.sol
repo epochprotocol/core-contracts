@@ -6,7 +6,6 @@ import "../helpers/UserOperationHelper.sol";
 import "../wallet/IEpochWallet.sol";
 import "./IConditionChecker.sol";
 import "openzeppelin/utils/cryptography/ECDSA.sol";
-import "forge-std/console2.sol";
 import "encoded-data-manipulation-lib/ByteManipulationLibrary.sol";
 
 contract EpochRegistry is IEpochRegistry {
@@ -72,18 +71,18 @@ contract EpochRegistry is IEpochRegistry {
             dataSourceCounter++;
         }
         taskMapping[task.taskId] = task;
+        taskStatus[task.taskId] = false;
         return task.taskId;
     }
 
     function verifyTransaction(uint256 taskId, UserOperation calldata userOperation) external returns (bool _send) {
+        require(taskStatus[taskId] == false, "Registry: task already executed");
         bytes32 hash = userOperation.hashWithoutNonce().toEthSignedMessageHash();
         Task memory task = taskMapping[taskId];
         IEpochWallet wallet = IEpochWallet(payable(msg.sender));
         address owner = wallet.owner();
         require(owner == hash.recover(userOperation.signature), "Registry: Invalid Signature");
         bytes4 selector = bytes4(userOperation.callData[:4]);
-        console2.logString("Selector:");
-        console2.logBytes4(selector);
         if (task.isBatchTransaction) {
             require(selector == _EXECUTE_EPOCH_BATCH_SELECTOR, "Registry: Transaction not batch transaction");
             (, address[] memory dest,,) =
@@ -122,6 +121,9 @@ contract EpochRegistry is IEpochRegistry {
         external
         returns (bool _send, address _dest, uint256 _value, bytes memory _func)
     {
+        require(taskStatus[taskId] == false, "Registry: Task already executed");
+        require(taskMapping[taskId].taskId == taskId, "Registry: Task does not exist");
+
         Task memory task = taskMapping[taskId];
         _func = func;
 
@@ -141,7 +143,7 @@ contract EpochRegistry is IEpochRegistry {
         (bool status, bytes memory response) = dataSource.dataSource.call(dataSource.encodedQuery);
         require(status, "Registry: data fetch failed");
         bytes32 dataToOverwrite = response.getFixedData(dataSource.dataPosition);
-        return _func.overwriteStaticData(dataSource.positionInCallData);
+        return _func.overwriteStaticData(dataToOverwrite, dataSource.positionInCallData);
     }
 
     function processBatchTransaction(
@@ -150,6 +152,8 @@ contract EpochRegistry is IEpochRegistry {
         uint256[] calldata values,
         bytes[] calldata func
     ) external returns (bool _send, address[] memory _dest, uint256[] memory _values, bytes[] memory _func) {
+        require(taskStatus[taskId] == false, "Registry: Task already executed");
+        require(taskMapping[taskId].taskId == taskId, "Registry: Task does not exist");
         //updated taskID here
         _send = true;
         _dest = dest;

@@ -16,7 +16,7 @@ contract EpochWalletTest is Test {
 
     EpochWallet public wallet;
     EpochWalletFactory public factory;
-
+    EpochRegistry public registry;
     uint256 public mainnetFork;
     address public immutable adEntrypoint = 0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789;
     uint256 public immutable salt = 123456;
@@ -24,6 +24,8 @@ contract EpochWalletTest is Test {
     address private immutable deployer = 0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     string mnemonic;
     uint256 privateKey;
+    address[] destinations;
+
     mapping(uint256 => bool) gotFallback;
 
     receive() external payable {}
@@ -36,7 +38,7 @@ contract EpochWalletTest is Test {
     constructor() {
         string memory mainnetUrl = vm.envString("MAINNET_RPC_URL");
         mainnetFork = vm.createFork(mainnetUrl);
-        EpochRegistry registry = new EpochRegistry();
+        registry = new EpochRegistry();
         IEntryPoint ept = IEntryPoint(adEntrypoint);
         EpochWallet walletImpl = new EpochWallet(ept);
         factory = new EpochWalletFactory(walletImpl, registry);
@@ -48,14 +50,77 @@ contract EpochWalletTest is Test {
     }
 
     function testExecuteEpoch() public {
+        address destination = address(this);
+        bool isBatchTransaction = false;
+        IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+            useExecutionWindow: true,
+            recurring: true,
+            recurrenceGap: 10000,
+            executionWindowStart: 0,
+            executionWindowEnd: 100000000
+        });
+        IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+            useOnChainCondition: false,
+            conditionChecker: IConditionChecker(address(0)),
+            dataPosition: 0,
+            dataSource: address(0),
+            dataType: IEpochRegistry.DataType.STRING,
+            encodedQuery: new bytes(0),
+            encodedCondition: new bytes(0)
+        });
+        IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+            useDataSource: false,
+            dataPosition: 0,
+            positionInCallData: 0,
+            dataSource: address(0),
+            dataType: IEpochRegistry.StaticDataType.UINT,
+            encodedQuery: new bytes(0)
+        });
+
+        vm.prank(address(wallet));
+        uint256 taskId = registry.addTask(
+            destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+        );
         bytes memory data = new bytes(0);
-        wallet.executeEpoch(1, address(this), 1 ether, data);
+        vm.prank(adEntrypoint);
+        wallet.executeEpoch(taskId, address(this), 1 ether, data);
         assertEq(address(wallet).balance, 99 ether);
     }
 
     function testExecuteEpochBatch() public {
-        uint256 taskid = 1;
-        bytes memory data = abi.encode(taskid);
+        address destination = address(this);
+        bool isBatchTransaction = true;
+        IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+            useExecutionWindow: true,
+            recurring: true,
+            recurrenceGap: 10000,
+            executionWindowStart: 0,
+            executionWindowEnd: 100000000
+        });
+        IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+            useOnChainCondition: false,
+            conditionChecker: IConditionChecker(address(0)),
+            dataPosition: 0,
+            dataSource: address(0),
+            dataType: IEpochRegistry.DataType.STRING,
+            encodedQuery: new bytes(0),
+            encodedCondition: new bytes(0)
+        });
+        IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+            useDataSource: false,
+            dataPosition: 0,
+            positionInCallData: 0,
+            dataSource: address(0),
+            dataType: IEpochRegistry.StaticDataType.UINT,
+            encodedQuery: new bytes(0)
+        });
+
+        vm.prank(address(wallet));
+        destinations.push(address(this));
+        uint256 taskId = registry.addTask(
+            destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+        );
+        bytes memory data = abi.encode(taskId);
         address[] memory dests = new address[](2);
         uint256[] memory values = new uint256[](2);
         values[0] = 1 ether;
@@ -65,8 +130,8 @@ contract EpochWalletTest is Test {
         bytes[] memory funcs = new bytes[](2);
         funcs[0] = data;
         funcs[1] = data;
-        wallet.executeBatchEpoch(taskid, dests, values, funcs);
-        assertEq(gotFallback[taskid], true);
+        wallet.executeBatchEpoch(taskId, dests, values, funcs);
+        assertEq(gotFallback[taskId], true);
     }
 
     function testFailExecuteEpochBatch() public {

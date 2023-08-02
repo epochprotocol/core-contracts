@@ -4,7 +4,7 @@ pragma solidity ^0.8.12;
 import "../IConditionChecker.sol";
 
 contract EqualityChecker is IConditionChecker {
-    function checkCondition(bytes memory userInput, bytes memory onChainCondition) external returns (bool) {
+    function checkCondition(bytes memory, bytes memory) external pure returns (bool) {
         return true;
     }
 }

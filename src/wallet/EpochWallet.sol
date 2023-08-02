@@ -71,7 +71,7 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
      * execute a transaction from epoch protocol
      */
     function executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func) external {
-        _requireFromEntryPointOrOwner();
+        _requireFromEntryPoint();
 
         (bool _send, address _dest, uint256 _value, bytes memory _func) =
             _epochRegistry.processTransaction(taskId, dest, value, func);
@@ -83,7 +83,7 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
      * execute a sequence of transactions
      */
     function executeBatch(address[] calldata dest, uint256[] calldata values, bytes[] calldata func) external {
-        _requireFromEntryPointOrOwner();
+        _requireFromEntryPoint();
 
         require(dest.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; i++) {
@@ -144,29 +144,19 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         returns (uint256 validationData)
     {
         bytes4 selector = bytes4(userOp.callData[:4]);
-        console2.logBytes4(selector);
 
         if (selector == _EXECUTE_EPOCH_SELECTOR || selector == _EXECUTE_EPOCH_BATCH_SELECTOR) {
-            console2.logString("Inside Epoch Selector");
-
             bytes32 userOpHashWithoutNonce = userOp.hashWithoutNonce();
-            console2.logString("Hash without nonce");
-            console2.logBytes32(userOpHashWithoutNonce);
             bytes32 hash = userOpHashWithoutNonce.toEthSignedMessageHash();
             address signer = hash.recover(userOp.signature);
-            console2.log("Signer", signer);
             if (owner != signer) return SIG_VALIDATION_FAILED;
             uint256 taskId;
             if (selector == _EXECUTE_EPOCH_SELECTOR) {
                 (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address, uint256, bytes));
             } else {
-                console2.logString("Inside Batch");
-                console2.logBytes(userOp.callData[4:]);
                 (taskId,,,) = abi.decode(userOp.callData[4:], (uint256, address[], uint256[], bytes[]));
-                console2.log(taskId);
             }
             bool _send = _epochRegistry.verifyTransaction(taskId, userOp);
-            console2.log("_send", _send);
             if (_send) return 0;
             return 1;
         } else {

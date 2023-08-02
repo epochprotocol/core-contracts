@@ -10,6 +10,8 @@ import "../src/wallet/EpochWalletFactory.sol";
 import {CustomUserOperationLib, UserOperation} from "../src/helpers/UserOperationHelper.sol";
 import "account-abstraction/test/TestUtil.sol";
 import "../src/registry/IConditionChecker.sol";
+import "../src/registry/conditions/EqualityChecker.sol";
+import "./DummyData.sol";
 
 contract EpochRegistryTest is Test {
     using CustomUserOperationLib for UserOperation;
@@ -48,7 +50,6 @@ contract EpochRegistryTest is Test {
         factory = new EpochWalletFactory(walletImpl, registry);
         mnemonic = vm.envString("TEST_MNEMONIC");
         privateKey = vm.deriveKey(mnemonic, 0);
-        console2.log(privateKey);
         customAddress = vm.addr(privateKey);
         wallet = factory.createAccount(customAddress, salt);
         hoax(address(wallet), 100 ether);
@@ -197,7 +198,6 @@ contract EpochRegistryTest is Test {
         values = [1 ether];
         datas = [new bytes(0)];
         bytes memory data = abi.encodeWithSelector(selector, taskId, destinations, values, datas);
-        console2.logBytes(data);
 
         UserOperation memory userOp = UserOperation({
             sender: customAddress,
@@ -214,9 +214,14 @@ contract EpochRegistryTest is Test {
         });
 
         this.executeAsCallData(userOp);
+        vm.prank(adEntrypoint);
+        uint256 previousBalance = address(this).balance;
+        wallet.executeBatchEpoch(taskId, destinations, values, datas);
+        uint256 balancePostExecution = address(this).balance;
+        assertEq(previousBalance + 1 ether, balancePostExecution);
     }
 
-    function testValidateTransaction() external {
+    function testValidateAndProcessTransaction() external {
         // initializing task
         address destination = address(this);
         bool isBatchTransaction = false;
@@ -254,10 +259,7 @@ contract EpochRegistryTest is Test {
         uint256 verificationGasLimit = 100000;
         uint256 preVerificationGas = 100000;
         bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
-        bytes4 selector2 = bytes4(keccak256(bytes("executeBatchEpoch(uint256, address[], uint256[], bytes[])")));
-        console2.logBytes4(selector2);
 
-        console2.logBytes4(selector);
         bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
         UserOperation memory userOp = UserOperation({
             sender: customAddress,
@@ -274,6 +276,164 @@ contract EpochRegistryTest is Test {
         });
 
         this.executeAsCallData(userOp);
+        vm.prank(adEntrypoint);
+        uint256 previousBalance = address(this).balance;
+        wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
+        uint256 balancePostExecution = address(this).balance;
+        assertEq(previousBalance + 1 ether, balancePostExecution);
+    }
+
+    function testValidateAndProcessTransactioWithOnChainCondition() external {
+        // initializing task
+        uint256 taskId;
+        address destination = address(this);
+        {
+            bool isBatchTransaction = false;
+            IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+                useExecutionWindow: false,
+                recurring: true,
+                recurrenceGap: 10000,
+                executionWindowStart: 0,
+                executionWindowEnd: 100000000
+            });
+            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyData testUtil = new DummyData();
+            bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
+            bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
+            IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+                useOnChainCondition: true,
+                conditionChecker: IConditionChecker(address(equalityChecker)),
+                dataPosition: 0,
+                dataSource: address(testUtil),
+                dataType: IEpochRegistry.DataType.UINT,
+                encodedQuery: encodedQuery,
+                encodedCondition: new bytes(0)
+            });
+            IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+                useDataSource: false,
+                dataPosition: 0,
+                positionInCallData: 0,
+                dataSource: address(0),
+                dataType: IEpochRegistry.StaticDataType.UINT,
+                encodedQuery: new bytes(0)
+            });
+
+            vm.prank(address(wallet));
+
+            taskId = registry.addTask(
+                destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+            );
+        }
+        uint256 callGasLimit = 200000;
+        uint256 verificationGasLimit = 100000;
+        uint256 preVerificationGas = 100000;
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
+        bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
+        UserOperation memory userOp = UserOperation({
+            sender: customAddress,
+            nonce: 20,
+            initCode: new bytes(0),
+            callData: data,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: 1 gwei,
+            maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: new bytes(0),
+            signature: new bytes(0)
+        });
+
+        {
+            this.executeAsCallData(userOp);
+            vm.prank(adEntrypoint);
+            uint256 previousBalance = address(this).balance;
+            wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
+            uint256 balancePostExecution = address(this).balance;
+            assertEq(previousBalance + 1 ether, balancePostExecution);
+        }
+    }
+
+    function testValidateAndProcessTransactioWithOnChainDataSource() external {
+        // initializing task
+        uint256 taskId;
+        address destination = address(this);
+        {
+            bool isBatchTransaction = false;
+            IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+                useExecutionWindow: false,
+                recurring: true,
+                recurrenceGap: 10000,
+                executionWindowStart: 0,
+                executionWindowEnd: 100000000
+            });
+            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyData testUtil = new DummyData();
+            bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
+            bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
+            IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+                useOnChainCondition: true,
+                conditionChecker: IConditionChecker(address(equalityChecker)),
+                dataPosition: 0,
+                dataSource: address(testUtil),
+                dataType: IEpochRegistry.DataType.UINT,
+                encodedQuery: encodedQuery,
+                encodedCondition: new bytes(0)
+            });
+            IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+                useDataSource: false,
+                dataPosition: 0,
+                positionInCallData: 0,
+                dataSource: address(0),
+                dataType: IEpochRegistry.StaticDataType.UINT,
+                encodedQuery: new bytes(0)
+            });
+
+            vm.prank(address(wallet));
+
+            taskId = registry.addTask(
+                destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+            );
+        }
+        uint256 callGasLimit = 200000;
+        uint256 verificationGasLimit = 100000;
+        uint256 preVerificationGas = 100000;
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256, address, uint256, bytes)")));
+        bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
+        UserOperation memory userOp = UserOperation({
+            sender: customAddress,
+            nonce: 20,
+            initCode: new bytes(0),
+            callData: data,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: 1 gwei,
+            maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: new bytes(0),
+            signature: new bytes(0)
+        });
+
+        {
+            this.executeAsCallData(userOp);
+            vm.prank(adEntrypoint);
+            uint256 previousBalance = address(this).balance;
+            wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
+            uint256 balancePostExecution = address(this).balance;
+            assertEq(previousBalance + 1 ether, balancePostExecution);
+        }
+    }
+
+    function testFailProcessTransaction() external {
+        vm.prank(adEntrypoint);
+        wallet.executeEpoch(1, address(this), 1 ether, new bytes(0));
+    }
+
+    function testFailProcessBatchTransaction() external {
+        vm.prank(adEntrypoint);
+        destinations.push(address(this));
+        values.push(1 ether);
+        datas.push(new bytes(0));
+        wallet.executeBatchEpoch(1, destinations, values, datas);
     }
 
     function executeAsCallData(UserOperation calldata userOp) external {
@@ -296,16 +456,11 @@ contract EpochRegistryTest is Test {
         uint256 expectedPay = actualGasPrice * (callGasLimit + verificationGasLimit);
         vm.prank(adEntrypoint);
         uint256 validation = wallet.validateUserOp(userOpAsMemory, userOpHash, expectedPay);
-
+        // uint256 previousBalance = address(this).balance;
+        // (bool status,) = address(wallet).call(userOp.callData);
+        // uint256 balancePostExecution = address(this).balance;
+        // assertEq(status, true);
+        // assertEq(previousBalance + 1 ether - expectedPay, balancePostExecution);
         assertEq(validation, 0);
     }
 }
-//  abi.encodeWithSignature(
-//     "addTask(address, bool, ExecutionWindow, OnChainCondition, DataSource ,address[])",
-//     destination,
-//     isBatchTransaction,
-//     executionWindowCondition,
-//     onChainCondition,
-//     dataSource,
-//     destinations
-// );
