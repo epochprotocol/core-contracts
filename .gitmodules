@@ -10,7 +10,3 @@
 	path = lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 	branch = v4.9.2
-
-[submodule "lib/encoded-data-manipulation-lib"]
-	path = lib/encoded-data-manipulation-lib
-	url = https://github.com/epochprotocol/encoded-data-manipulation-lib
