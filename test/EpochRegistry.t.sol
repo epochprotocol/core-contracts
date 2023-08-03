@@ -10,7 +10,7 @@ import "../src/wallet/EpochWalletFactory.sol";
 import {CustomUserOperationLib, UserOperation} from "../src/helpers/UserOperationHelper.sol";
 import "account-abstraction/test/TestUtil.sol";
 import "../src/registry/IConditionChecker.sol";
-import "../src/registry/conditions/EqualityChecker.sol";
+import "../src/registry/conditions/DummyChecker.sol";
 import "./DummyData.sol";
 
 contract EpochRegistryTest is Test {
@@ -297,13 +297,13 @@ contract EpochRegistryTest is Test {
                 executionWindowStart: 0,
                 executionWindowEnd: 100000000
             });
-            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyChecker dummyChecker = new DummyChecker();
             DummyData testUtil = new DummyData();
             bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
             bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
             IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
                 useOnChainCondition: true,
-                conditionChecker: IConditionChecker(address(equalityChecker)),
+                conditionChecker: IConditionChecker(address(dummyChecker)),
                 dataPosition: 0,
                 dataSource: address(testUtil),
                 dataType: IEpochRegistry.DataType.UINT,
@@ -366,13 +366,13 @@ contract EpochRegistryTest is Test {
                 executionWindowStart: 0,
                 executionWindowEnd: 100000000
             });
-            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyChecker dummyChecker = new DummyChecker();
             DummyData testUtil = new DummyData();
             bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
             bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
             IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
                 useOnChainCondition: true,
-                conditionChecker: IConditionChecker(address(equalityChecker)),
+                conditionChecker: IConditionChecker(address(dummyChecker)),
                 dataPosition: 0,
                 dataSource: address(testUtil),
                 dataType: IEpochRegistry.DataType.UINT,
@@ -438,13 +438,13 @@ contract EpochRegistryTest is Test {
                 executionWindowStart: 0,
                 executionWindowEnd: 100000000
             });
-            EqualityChecker equalityChecker = new EqualityChecker();
+            DummyChecker dummyChecker = new DummyChecker();
             DummyData testUtil = new DummyData();
             bytes4 functionSig = bytes4(keccak256(bytes("returnDummyData()")));
             bytes memory encodedQuery = abi.encodeWithSelector(functionSig);
             IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
                 useOnChainCondition: true,
-                conditionChecker: IConditionChecker(address(equalityChecker)),
+                conditionChecker: IConditionChecker(address(dummyChecker)),
                 dataPosition: 0,
                 dataSource: address(testUtil),
                 dataType: IEpochRegistry.DataType.UINT,

@@ -230,9 +230,9 @@ BRF:54
 BRH:15
 end_of_record
 TN:
-SF:src/registry/conditions/EqualityChecker.sol
-FN:7,EqualityChecker.checkCondition
-FNDA:0,EqualityChecker.checkCondition
+SF:src/registry/conditions/DummyChecker.sol
+FN:7,DummyChecker.checkCondition
+FNDA:0,DummyChecker.checkCondition
 DA:8,0
 FNF:1
 FNH:0
