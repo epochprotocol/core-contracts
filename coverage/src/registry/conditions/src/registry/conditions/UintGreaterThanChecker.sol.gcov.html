@@ -4,7 +4,7 @@
 
 <head>
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-  <title>LCOV - lcov.info - src/registry/conditions/src/registry/conditions/EqualityChecker.sol - functions</title>
+  <title>LCOV - lcov.info - src/registry/conditions/src/registry/conditions/UintGreaterThanChecker.sol</title>
   <link rel="stylesheet" type="text/css" href="../../../../../../gcov.css">
 </head>
 
@@ -19,7 +19,7 @@
                 <table cellpadding=1 border=0 width="100%">
           <tr>
             <td width="10%" class="headerItem">Current view:</td>
-            <td width="10%" class="headerValue"><a href="../../../../../../index.html">top level</a> - <a href="index.html">src/registry/conditions/src/registry/conditions</a> - EqualityChecker.sol<span style="font-size: 80%;"> (<a href="EqualityChecker.sol.gcov.html">source</a> / functions)</span></td>
+            <td width="10%" class="headerValue"><a href="../../../../../../index.html">top level</a> - <a href="index.html">src/registry/conditions/src/registry/conditions</a> - UintGreaterThanChecker.sol<span style="font-size: 80%;"> (source / <a href="UintGreaterThanChecker.sol.func-c.html">functions</a>)</span></td>
             <td width="5%"></td>
             <td width="5%"></td>
             <td width="5%" class="headerCovTableHead">Coverage</td>
@@ -32,8 +32,8 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
@@ -61,26 +61,32 @@
             <tr><td class="ruler"><img src="../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
           </table>
 
-          <center>
-          <table cellpadding=1 cellspacing=1 border=0>
-            <tr><td><br></td></tr>
+          <table cellpadding=0 cellspacing=0 border=0>
             <tr>
-              <td class="tableHead">Function Name <span  title="Click to sort table by function name" class="tableHeadSort"><a href="EqualityChecker.sol.func.html"><img src="../../../../../../updown.png" width=10 height=14 alt="Sort by function name" title="Click to sort table by function name" border=0></a></span></td>
-              
-              <td class="tableHead">Hit count <span  title="Click to sort table by function hit count" class="tableHeadSort"><img src="../../../../../../glass.png" width=10 height=14 alt="Sort by function hit count" title="Click to sort table by function hit count" border=0></span></td>
-              
-              
+              <td><br></td>
             </tr>
             <tr>
-              <td class="coverFn"><a href="EqualityChecker.sol.gcov.html#L5">EqualityChecker.checkCondition</a></td>
-              
-              <td class="coverFnHi">2</td>
-              
-              
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : // SPDX-License-Identifier: GPL-3.0</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : pragma solidity ^0.8.12;</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : </span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : import &quot;../IConditionChecker.sol&quot;;</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : </span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : contract UintGreaterThanEqualToConditionChecker is IConditionChecker {</span>
+<span id="L7"><span class="lineNum">       7</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     function checkCondition(bytes memory userInput, bytes memory onChainCondition) external pure returns (bool) {</span></span>
+<span id="L8"><span class="lineNum">       8</span>                 :<span class="tlaGNC">           6 :         (uint256 _userInput) = abi.decode(userInput, (uint256));</span></span>
+<span id="L9"><span class="lineNum">       9</span>                 :<span class="tlaGNC">           6 :         (uint256 _onChainCondition) = abi.decode(onChainCondition, (uint256));</span></span>
+<span id="L10"><span class="lineNum">      10</span>                 :<span class="tlaGNC">           6 :         return _onChainCondition &gt;= _userInput;</span></span>
+<span id="L11"><span class="lineNum">      11</span>                 :             :     }</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : }</span>
+        </pre>
+              </td>
             </tr>
           </table>
           <br>
-          </center>
+
           <table width="100%" border=0 cellspacing=0 cellpadding=0>
             <tr><td class="ruler"><img src="../../../../../../glass.png" width=3 height=3 alt=""></td></tr>
             <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>

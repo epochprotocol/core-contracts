@@ -31,6 +31,8 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     IEpochRegistry private _epochRegistry;
 
     event EpochWalletInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event ExecuteEpoch(uint256 indexed taskId);
+    event UpdateRegistry(address indexed oldRegistry, address indexed newRegistry);
 
     modifier onlyOwner() {
         _onlyOwner();
@@ -77,6 +79,7 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
             _epochRegistry.processTransaction(taskId, dest, value, func);
         _requireEpochVerification(_send);
         _call(_dest, _value, _func);
+        emit ExecuteEpoch(taskId);
     }
 
     /**
@@ -109,6 +112,7 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
         for (uint256 i = 0; i < _dest.length; i++) {
             _call(_dest[i], _values[i], _func[i]);
         }
+        emit ExecuteEpoch(taskId);
     }
 
     /**
@@ -207,6 +211,7 @@ contract EpochWallet is BaseAccount, TokenCallbackHandler, UUPSUpgradeable, Init
     function updateRegistry(IEpochRegistry _registry) external {
         _requireFromEntryPointOrOwner();
         require(address(_registry) != address(0), "Factory: Address must be valid");
+        emit UpdateRegistry(address(_epochRegistry), address(_registry));
         _epochRegistry = _registry;
     }
 }

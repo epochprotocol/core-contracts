@@ -383,8 +383,29 @@ contract EpochWalletTest is Test {
         // vm.stopPrank();
         vm.prank(adEntrypoint);
         // hoax(adEntrypoint, 100 ether);
-
         uint256 validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
         assertEq(validation, 1);
+
+        vm.prank(address(this));
+        vm.expectRevert("account: not from EntryPoint");
+        validation = testWallet.validateUserOp(userOp, userOpHash, expectedPay);
+    }
+
+    function testUpdateRegistry() external {
+        IEpochRegistry _registry = IEpochRegistry(address(this));
+        wallet.updateRegistry(_registry);
+        IEpochRegistry updatedRegistry = wallet.epochRegistry();
+        assertEq(address(_registry), address(updatedRegistry));
+    }
+
+    function testFailUpdateRegistryZeroAddress() external {
+        IEpochRegistry _registry = IEpochRegistry(address(0));
+        wallet.updateRegistry(_registry);
+    }
+
+    function testFailUpdateRegistryNotEntryPoint() external {
+        vm.prank(address(0));
+        IEpochRegistry _registry = IEpochRegistry(address(this));
+        wallet.updateRegistry(_registry);
     }
 }

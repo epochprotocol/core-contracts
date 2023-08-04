@@ -26,6 +26,13 @@ contract EpochRegistry is IEpochRegistry {
     mapping(uint256 => OnChainCondition) public onChainConditionMapping;
     mapping(uint256 => DataSource) public dataSourceMapping;
 
+    event NewTask(Task task);
+    event NewExecutionWindow(uint256 indexed id, ExecutionWindow window);
+    event NewOnChainCondition(uint256 indexed id, OnChainCondition condition);
+    event NewDataSource(uint256 indexed id, DataSource dataSource);
+
+    event TaskProcessed(uint256 indexed id);
+
     //dont send data source for batched transactions
     //op hash without nonce
     function addTask(
@@ -60,19 +67,24 @@ contract EpochRegistry is IEpochRegistry {
         if (executionWindowCondition.useExecutionWindow) {
             executionWindowMapping[executionWindowCounter] = executionWindowCondition;
             task.timeConditionId = executionWindowCounter;
+            emit NewExecutionWindow(executionWindowCounter, executionWindowCondition);
             executionWindowCounter++;
         } else if (onChainCondition.useOnChainCondition) {
             onChainConditionMapping[onChainConditionCounter] = onChainCondition;
             task.onChainConditionId = onChainConditionCounter;
+            emit NewOnChainCondition(onChainConditionCounter, onChainCondition);
             onChainConditionCounter++;
         }
         if (dataSource.useDataSource) {
             dataSourceMapping[dataSourceCounter] = dataSource;
             task.dataSourceId = dataSourceCounter;
+            emit NewDataSource(dataSourceCounter, dataSource);
+
             dataSourceCounter++;
         }
         taskMapping[task.taskId] = task;
         taskStatus[task.taskId] = false;
+        emit NewTask(task);
         return task.taskId;
     }
 
@@ -138,6 +150,7 @@ contract EpochRegistry is IEpochRegistry {
         //updated taskID here
 
         taskStatus[taskId] = true;
+        emit TaskProcessed(taskId);
     }
 
     function _fetchData(DataSource memory dataSource, bytes memory _func) internal returns (bytes memory) {
@@ -166,5 +179,6 @@ contract EpochRegistry is IEpochRegistry {
         //updated taskID here
 
         taskStatus[taskId] = true;
+        emit TaskProcessed(taskId);
     }
 }

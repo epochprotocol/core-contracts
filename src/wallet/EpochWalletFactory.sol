@@ -21,7 +21,11 @@ contract EpochWalletFactory is Ownable {
         accountImplementation = EpochWallet(_epochWallet);
 
         epochRegistry = _epochRegistry;
+        emit RegistryUpdate(address(epochRegistry), address(_epochRegistry));
     }
+
+    event WalletCreated(address indexed owner, address indexed wallet);
+    event RegistryUpdate(address indexed oldRegistry, address indexed newRegistry);
 
     /**
      * create an account, and return its address.
@@ -46,6 +50,7 @@ contract EpochWalletFactory is Ownable {
                 )
             )
         );
+        emit WalletCreated(owner, address(ret));
     }
 
     /**
