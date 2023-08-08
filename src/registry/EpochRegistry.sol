@@ -21,12 +21,16 @@ contract EpochRegistry is IEpochRegistry {
     uint256 onChainConditionCounter = 1;
     uint256 dataSourceCounter = 1;
     mapping(uint256 => bool) public taskStatus;
+    mapping(uint256 => bool) public taskDeleted;
+
     mapping(uint256 => Task) public taskMapping;
     mapping(uint256 => ExecutionWindow) public executionWindowMapping;
     mapping(uint256 => OnChainCondition) public onChainConditionMapping;
     mapping(uint256 => DataSource) public dataSourceMapping;
 
     event NewTask(Task task);
+    event TaskDeleted(Task task);
+
     event NewExecutionWindow(uint256 indexed id, ExecutionWindow window);
     event NewOnChainCondition(uint256 indexed id, OnChainCondition condition);
     event NewDataSource(uint256 indexed id, DataSource dataSource);
@@ -94,6 +98,7 @@ contract EpochRegistry is IEpochRegistry {
         Task memory task = taskMapping[taskId];
         IEpochWallet wallet = IEpochWallet(payable(msg.sender));
         address owner = wallet.owner();
+        require(task.taskOwner == msg.sender, "Registry: No the task owner");
         require(owner == hash.recover(userOperation.signature), "Registry: Invalid Signature");
         bytes4 selector = bytes4(userOperation.callData[:4]);
         if (task.isBatchTransaction) {
@@ -148,8 +153,14 @@ contract EpochRegistry is IEpochRegistry {
         _dest = dest;
         _value = value;
         //updated taskID here
-
-        taskStatus[taskId] = true;
+        ExecutionWindow memory executionWindow = executionWindowMapping[task.timeConditionId];
+        if (executionWindow.recurring) {
+            executionWindow.executionWindowStart += executionWindow.recurrenceGap;
+            executionWindow.executionWindowEnd += executionWindow.recurrenceGap;
+            executionWindowMapping[task.timeConditionId] = executionWindow;
+        } else {
+            taskStatus[taskId] = true;
+        }
         emit TaskProcessed(taskId);
     }
 
@@ -169,7 +180,8 @@ contract EpochRegistry is IEpochRegistry {
         bytes[] calldata func
     ) external returns (bool _send, address[] memory _dest, uint256[] memory _values, bytes[] memory _func) {
         require(taskStatus[taskId] == false, "Registry: Task already executed");
-        require(taskMapping[taskId].taskId == taskId, "Registry: Task does not exist");
+        Task memory task = taskMapping[taskId];
+        require(task.taskId == taskId, "Registry: Task does not exist");
         //updated taskID here
         _send = true;
         _dest = dest;
@@ -178,7 +190,24 @@ contract EpochRegistry is IEpochRegistry {
 
         //updated taskID here
 
-        taskStatus[taskId] = true;
+        ExecutionWindow memory executionWindow = executionWindowMapping[task.timeConditionId];
+        if (executionWindow.recurring) {
+            executionWindow.executionWindowStart += executionWindow.recurrenceGap;
+            executionWindow.executionWindowEnd += executionWindow.recurrenceGap;
+            executionWindowMapping[task.timeConditionId] = executionWindow;
+        } else {
+            taskStatus[taskId] = true;
+        }
         emit TaskProcessed(taskId);
+    }
+
+    function deleteTask(uint256 taskId) external {
+        Task memory task = taskMapping[taskId];
+        require(task.taskOwner == msg.sender, "Registry: not the task owner");
+        require(task.taskId == taskId, "Registry: task does not exist");
+        taskStatus[taskId] = true;
+        taskDeleted[taskId] = true;
+        delete taskMapping[taskId];
+        emit TaskDeleted(task);
     }
 }

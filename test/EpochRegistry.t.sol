@@ -62,7 +62,7 @@ contract EpochRegistryTest is Test {
         gotTestCall[taskId] = testNumber;
     }
 
-    function testAddTask() external {
+    function testAddAndDelteTask() external {
         // initializing task
         address destination = deployer;
         bool isBatchTransaction = false;
@@ -155,6 +155,16 @@ contract EpochRegistryTest is Test {
             assertEq(_positionInCallData, 0);
             assertEq(__dataSource, address(0));
             assertEq(__encodedQuery, new bytes(0));
+        }
+        {
+            vm.prank(address(wallet));
+            registry.deleteTask(taskId);
+            (uint256 __taskId, bool __isBatchTransaction, address __taskOwner, address __destination,,,) =
+                registry.taskMapping(taskId);
+            assertEq(0, __taskId);
+            assertEq(false, __isBatchTransaction);
+            assertEq(address(0), __taskOwner);
+            assertEq(address(0), __destination);
         }
     }
 
@@ -281,6 +291,82 @@ contract EpochRegistryTest is Test {
         uint256 previousBalance = address(this).balance;
         wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
         uint256 balancePostExecution = address(this).balance;
+        assertEq(previousBalance + 1 ether, balancePostExecution);
+    }
+
+    function testValidateAndProcessRecurringTransaction() external {
+        // initializing task
+        address destination = address(this);
+        bool isBatchTransaction = false;
+        IEpochRegistry.ExecutionWindow memory executionWindowCondition = IEpochRegistry.ExecutionWindow({
+            useExecutionWindow: true,
+            recurring: true,
+            recurrenceGap: 10000,
+            executionWindowStart: 0,
+            executionWindowEnd: 100000000
+        });
+        IEpochRegistry.OnChainCondition memory onChainCondition = IEpochRegistry.OnChainCondition({
+            useOnChainCondition: false,
+            conditionChecker: IConditionChecker(address(0)),
+            dataPosition: 0,
+            dataSource: address(0),
+            dataType: IEpochRegistry.DataType.STRING,
+            encodedQuery: new bytes(0),
+            encodedCondition: new bytes(0)
+        });
+        IEpochRegistry.DataSource memory dataSource = IEpochRegistry.DataSource({
+            useDataSource: false,
+            dataPosition: 0,
+            positionInCallData: 0,
+            dataSource: address(0),
+            encodedQuery: new bytes(0)
+        });
+
+        vm.prank(address(wallet));
+
+        uint256 taskId = registry.addTask(
+            destination, isBatchTransaction, executionWindowCondition, onChainCondition, dataSource, destinations
+        );
+        uint256 callGasLimit = 200000;
+        uint256 verificationGasLimit = 100000;
+        uint256 preVerificationGas = 100000;
+        bytes4 selector = bytes4(keccak256(bytes("executeEpoch(uint256,address,uint256,bytes)")));
+
+        bytes memory data = abi.encodeWithSelector(selector, taskId, address(this), 1 ether, new bytes(0));
+        UserOperation memory userOp = UserOperation({
+            sender: customAddress,
+            nonce: 20,
+            initCode: new bytes(0),
+            callData: data,
+            callGasLimit: callGasLimit,
+            verificationGasLimit: verificationGasLimit,
+            preVerificationGas: preVerificationGas,
+            maxFeePerGas: 1 gwei,
+            maxPriorityFeePerGas: 1 gwei,
+            paymasterAndData: new bytes(0),
+            signature: new bytes(0)
+        });
+
+        this.executeAsCallData(userOp);
+        vm.prank(adEntrypoint);
+        uint256 previousBalance = address(this).balance;
+        wallet.executeEpoch(taskId, destination, 1 ether, new bytes(0));
+        uint256 balancePostExecution = address(this).balance;
+        (,,,, uint256 _timeConditionId,,) = registry.taskMapping(taskId);
+        {
+            (
+                bool useExecutionWindow,
+                bool recurring,
+                uint64 recurrenceGap,
+                uint64 executionWindowStart,
+                uint64 executionWindowEnd
+            ) = registry.executionWindowMapping(_timeConditionId);
+            assertEq(useExecutionWindow, true);
+            assertEq(recurring, true);
+            assertEq(recurrenceGap, 10000);
+            assertEq(executionWindowStart, 10000);
+            assertEq(executionWindowEnd, 100000000 + 10000);
+        }
         assertEq(previousBalance + 1 ether, balancePostExecution);
     }
 
