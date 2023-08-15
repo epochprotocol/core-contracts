@@ -31,11 +31,13 @@ echo "Deploying Wallet Factory..."
 
 deployment_output_factory=$(forge create --rpc-url $DEPLOYMENT_RPC_URL  \
     --private-key $DEPLOYER_KEY \
-    --constructor-args $deployed_to_address $REGISTERY_ADDRESS \
+    --constructor-args $deployed_to_address $REGISTRY_ADDRESS \
     --etherscan-api-key $ETHERSCAN_API_KEY \
     --verify \
     src/wallet/EpochWalletFactory.sol:EpochWalletFactory)
 
+
+echo "Deployment output: $deployment_output_factory"
 # Use grep with regex to find the "Deployed to" line and extract the address
 deployed_to_line=$(echo "$deployment_output_factory" | grep -oE 'Deployed to: (0x[0-9a-fA-F]+)')
 
