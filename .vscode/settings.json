@@ -6,4 +6,9 @@
         "editor.defaultFormatter": "JuanBlanco.solidity"
     },
     "solidity.formatter": "forge",
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#253117",
+        "titleBar.activeBackground": "#344521",
+        "titleBar.activeForeground": "#F8FBF6"
+    },
 }

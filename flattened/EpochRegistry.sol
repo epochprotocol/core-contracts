@@ -22,7 +22,10 @@ struct ValidationData {
 
 //extract sigFailed, validAfter, validUntil.
 // also convert zero validUntil to type(uint48).max
-function _parseValidationData(uint256 validationData) pure returns (ValidationData memory data) {
+function _parseValidationData(uint256 validationData)
+    pure
+    returns (ValidationData memory data)
+{
     address aggregator = address(uint160(validationData));
     uint48 validUntil = uint48(validationData >> 160);
     if (validUntil == 0) {
@@ -33,12 +36,17 @@ function _parseValidationData(uint256 validationData) pure returns (ValidationDa
 }
 
 // intersect account and paymaster ranges.
-function _intersectTimeRange(uint256 validationData, uint256 paymasterValidationData)
+function _intersectTimeRange(
+    uint256 validationData,
+    uint256 paymasterValidationData
+)
     pure
     returns (ValidationData memory)
 {
-    ValidationData memory accountValidationData = _parseValidationData(validationData);
-    ValidationData memory pmValidationData = _parseValidationData(paymasterValidationData);
+    ValidationData memory accountValidationData =
+        _parseValidationData(validationData);
+    ValidationData memory pmValidationData =
+        _parseValidationData(paymasterValidationData);
     address aggregator = accountValidationData.aggregator;
     if (aggregator == address(0)) {
         aggregator = pmValidationData.aggregator;
@@ -57,8 +65,12 @@ function _intersectTimeRange(uint256 validationData, uint256 paymasterValidation
  * helper to pack the return value for validateUserOp
  * @param data - the ValidationData to pack
  */
-function _packValidationData(ValidationData memory data) pure returns (uint256) {
-    return uint160(data.aggregator) | (uint256(data.validUntil) << 160) | (uint256(data.validAfter) << (160 + 48));
+function _packValidationData(ValidationData memory data)
+    pure
+    returns (uint256)
+{
+    return uint160(data.aggregator) | (uint256(data.validUntil) << 160)
+        | (uint256(data.validAfter) << (160 + 48));
 }
 
 /**
@@ -67,8 +79,16 @@ function _packValidationData(ValidationData memory data) pure returns (uint256) 
  * @param validUntil last timestamp this UserOperation is valid (or zero for infinite)
  * @param validAfter first timestamp this UserOperation is valid
  */
-function _packValidationData(bool sigFailed, uint48 validUntil, uint48 validAfter) pure returns (uint256) {
-    return (sigFailed ? 1 : 0) | (uint256(validUntil) << 160) | (uint256(validAfter) << (160 + 48));
+function _packValidationData(
+    bool sigFailed,
+    uint48 validUntil,
+    uint48 validAfter
+)
+    pure
+    returns (uint256)
+{
+    return (sigFailed ? 1 : 0) | (uint256(validUntil) << 160)
+        | (uint256(validAfter) << (160 + 48));
 }
 
 /**
@@ -118,7 +138,11 @@ struct UserOperation {
  * Utility functions helpful when working with UserOperation structs.
  */
 library UserOperationLib {
-    function getSender(UserOperation calldata userOp) internal pure returns (address) {
+    function getSender(UserOperation calldata userOp)
+        internal
+        pure
+        returns (address)
+    {
         address data;
         //read sender from userOp, which is first userOp member (saves 800 gas...)
         assembly {
@@ -129,7 +153,11 @@ library UserOperationLib {
 
     //relayer/block builder might submit the TX with higher priorityFee, but the user should not
     // pay above what he signed for.
-    function gasPrice(UserOperation calldata userOp) internal view returns (uint256) {
+    function gasPrice(UserOperation calldata userOp)
+        internal
+        view
+        returns (uint256)
+    {
         unchecked {
             uint256 maxFeePerGas = userOp.maxFeePerGas;
             uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
@@ -141,7 +169,11 @@ library UserOperationLib {
         }
     }
 
-    function pack(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
+    function pack(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes memory ret)
+    {
         address sender = getSender(userOp);
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
@@ -167,7 +199,11 @@ library UserOperationLib {
         );
     }
 
-    function hash(UserOperation calldata userOp) internal pure returns (bytes32) {
+    function hash(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(pack(userOp));
     }
 
@@ -180,7 +216,11 @@ library UserOperationLib {
  * Utility functions helpful when working with UserOperation structs.
  */
 library CustomUserOperationLib {
-    function getSender(UserOperation calldata userOp) internal pure returns (address) {
+    function getSender(UserOperation calldata userOp)
+        internal
+        pure
+        returns (address)
+    {
         address data;
         //read sender from userOp, which is first userOp member (saves 800 gas...)
         assembly {
@@ -191,7 +231,11 @@ library CustomUserOperationLib {
 
     //relayer/block builder might submit the TX with higher priorityFee, but the user should not
     // pay above what he signed for.
-    function gasPrice(UserOperation calldata userOp) internal view returns (uint256) {
+    function gasPrice(UserOperation calldata userOp)
+        internal
+        view
+        returns (uint256)
+    {
         unchecked {
             uint256 maxFeePerGas = userOp.maxFeePerGas;
             uint256 maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
@@ -203,7 +247,11 @@ library CustomUserOperationLib {
         }
     }
 
-    function pack(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
+    function pack(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes memory ret)
+    {
         address sender = getSender(userOp);
         uint256 nonce = userOp.nonce;
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
@@ -229,7 +277,11 @@ library CustomUserOperationLib {
         );
     }
 
-    function packWithoutNonce(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
+    function packWithoutNonce(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes memory ret)
+    {
         address sender = getSender(userOp);
         bytes32 hashInitCode = calldataKeccak(userOp.initCode);
         bytes32 hashCallData = calldataKeccak(userOp.callData);
@@ -253,11 +305,19 @@ library CustomUserOperationLib {
         );
     }
 
-    function hash(UserOperation calldata userOp) internal pure returns (bytes32) {
+    function hash(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(pack(userOp));
     }
 
-    function hashWithoutNonce(UserOperation calldata userOp) internal pure returns (bytes32) {
+    function hashWithoutNonce(UserOperation calldata userOp)
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(packWithoutNonce(userOp));
     }
 
@@ -267,7 +327,12 @@ library CustomUserOperationLib {
 }
 
 interface IConditionChecker {
-    function checkCondition(bytes memory userInput, bytes memory onChainCondition) external returns (bool);
+    function checkCondition(
+        bytes memory userInput,
+        bytes memory onChainCondition
+    )
+        external
+        returns (bool);
 }
 
 interface IEpochRegistry {
@@ -328,9 +393,19 @@ interface IEpochRegistry {
 
     function taskStatus(uint256) external returns (bool);
 
-    function verifyTransaction(uint256 taskId, UserOperation calldata userOperation) external returns (bool _send);
+    function verifyTransaction(
+        uint256 taskId,
+        UserOperation calldata userOperation
+    )
+        external
+        returns (bool _send);
 
-    function processTransaction(uint256 taskId, address dest, uint256 value, bytes calldata func)
+    function processTransaction(
+        uint256 taskId,
+        address dest,
+        uint256 value,
+        bytes calldata func
+    )
         external
         returns (bool _send, address _dest, uint256 _value, bytes memory _func);
     function addTask(
@@ -340,14 +415,23 @@ interface IEpochRegistry {
         OnChainCondition memory onChainCondition,
         DataSource memory dataSource,
         address[] memory destinations
-    ) external returns (uint256);
+    )
+        external
+        returns (uint256);
 
     function processBatchTransaction(
         uint256 taskId,
         address[] calldata dest,
         uint256[] calldata values,
         bytes[] calldata func
-    ) external returns (bool _send, address[] memory _dest, uint256[] memory _values, bytes[] memory _func);
+    )
+        external
+        returns (
+            bool _send,
+            address[] memory _dest,
+            uint256[] memory _values,
+            bytes[] memory _func
+        );
 }
 
 /* solhint-disable avoid-low-level-calls */
@@ -379,7 +463,11 @@ interface IAccount {
      *      If an account doesn't use time-range, it is enough to return SIG_VALIDATION_FAILED value (1) for signature failure.
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
-    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    )
         external
         returns (uint256 validationData);
 }
@@ -389,7 +477,6 @@ interface IAccount {
  * Only one instance required on each chain.
  *
  */
-// SPDX-License-Identifier: GPL-3.0
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -403,15 +490,21 @@ interface IAccount {
 interface IStakeManager {
     event Deposited(address indexed account, uint256 totalDeposit);
 
-    event Withdrawn(address indexed account, address withdrawAddress, uint256 amount);
+    event Withdrawn(
+        address indexed account, address withdrawAddress, uint256 amount
+    );
 
     /// Emitted when stake or unstake delay are modified
-    event StakeLocked(address indexed account, uint256 totalStaked, uint256 unstakeDelaySec);
+    event StakeLocked(
+        address indexed account, uint256 totalStaked, uint256 unstakeDelaySec
+    );
 
     /// Emitted once a stake is scheduled for withdrawal
     event StakeUnlocked(address indexed account, uint256 withdrawTime);
 
-    event StakeWithdrawn(address indexed account, address withdrawAddress, uint256 amount);
+    event StakeWithdrawn(
+        address indexed account, address withdrawAddress, uint256 amount
+    );
 
     /**
      * @param deposit the entity's deposit
@@ -440,7 +533,10 @@ interface IStakeManager {
     }
 
     /// @return info - full deposit information of given account
-    function getDepositInfo(address account) external view returns (DepositInfo memory info);
+    function getDepositInfo(address account)
+        external
+        view
+        returns (DepositInfo memory info);
 
     /// @return the deposit (for gas payment) of the account
     function balanceOf(address account) external view returns (uint256);
@@ -475,7 +571,8 @@ interface IStakeManager {
      * @param withdrawAddress the address to send withdrawn value.
      * @param withdrawAmount the amount to withdraw.
      */
-    function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external;
+    function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount)
+        external;
 }
 
 /**
@@ -486,7 +583,12 @@ interface IAggregator {
      * validate aggregated signature.
      * revert if the aggregated signature does not match the given list of operations.
      */
-    function validateSignatures(UserOperation[] calldata userOps, bytes calldata signature) external view;
+    function validateSignatures(
+        UserOperation[] calldata userOps,
+        bytes calldata signature
+    )
+        external
+        view;
 
     /**
      * validate signature of a single userOp
@@ -496,7 +598,10 @@ interface IAggregator {
      * @return sigForUserOp the value to put into the signature field of the userOp when calling handleOps.
      *    (usually empty, unless account and aggregator support some kind of "multisig"
      */
-    function validateUserOpSignature(UserOperation calldata userOp) external view returns (bytes memory sigForUserOp);
+    function validateUserOpSignature(UserOperation calldata userOp)
+        external
+        view
+        returns (bytes memory sigForUserOp);
 
     /**
      * aggregate multiple signatures into a single value.
@@ -521,7 +626,10 @@ interface INonceManager {
      * @param key the high 192 bit of the nonce
      * @return nonce a full nonce to pass for next UserOp with this sender.
      */
-    function getNonce(address sender, uint192 key) external view returns (uint256 nonce);
+    function getNonce(address sender, uint192 key)
+        external
+        view
+        returns (uint256 nonce);
 
     /**
      * Manually increment the nonce of the sender.
@@ -563,7 +671,12 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * @param factory the factory used to deploy this account (in the initCode)
      * @param paymaster the paymaster used by this UserOp
      */
-    event AccountDeployed(bytes32 indexed userOpHash, address indexed sender, address factory, address paymaster);
+    event AccountDeployed(
+        bytes32 indexed userOpHash,
+        address indexed sender,
+        address factory,
+        address paymaster
+    );
 
     /**
      * An event emitted if the UserOperation "callData" reverted with non-zero length
@@ -573,7 +686,10 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * @param revertReason - the return bytes from the (reverted) call to "callData".
      */
     event UserOperationRevertReason(
-        bytes32 indexed userOpHash, address indexed sender, uint256 nonce, bytes revertReason
+        bytes32 indexed userOpHash,
+        address indexed sender,
+        uint256 nonce,
+        bytes revertReason
     );
 
     /**
@@ -611,7 +727,12 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * @param factoryInfo stake information about the factory (if any)
      * @param paymasterInfo stake information about the paymaster (if any)
      */
-    error ValidationResult(ReturnInfo returnInfo, StakeInfo senderInfo, StakeInfo factoryInfo, StakeInfo paymasterInfo);
+    error ValidationResult(
+        ReturnInfo returnInfo,
+        StakeInfo senderInfo,
+        StakeInfo factoryInfo,
+        StakeInfo paymasterInfo
+    );
 
     /**
      * Successful result from simulateValidation, if the account returns a signature aggregator
@@ -639,7 +760,12 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * return value of simulateHandleOp
      */
     error ExecutionResult(
-        uint256 preOpGas, uint256 paid, uint48 validAfter, uint48 validUntil, bool targetSuccess, bytes targetResult
+        uint256 preOpGas,
+        uint256 paid,
+        uint48 validAfter,
+        uint48 validUntil,
+        bool targetSuccess,
+        bytes targetResult
     );
 
     //UserOps handled, per aggregator
@@ -659,21 +785,31 @@ interface IEntryPoint is IStakeManager, INonceManager {
      * @param ops the operations to execute
      * @param beneficiary the address to receive the fees
      */
-    function handleOps(UserOperation[] calldata ops, address payable beneficiary) external;
+    function handleOps(
+        UserOperation[] calldata ops,
+        address payable beneficiary
+    )
+        external;
 
     /**
      * Execute a batch of UserOperation with Aggregators
      * @param opsPerAggregator the operations to execute, grouped by aggregator (or address(0) for no-aggregator accounts)
      * @param beneficiary the address to receive the fees
      */
-    function handleAggregatedOps(UserOpsPerAggregator[] calldata opsPerAggregator, address payable beneficiary)
+    function handleAggregatedOps(
+        UserOpsPerAggregator[] calldata opsPerAggregator,
+        address payable beneficiary
+    )
         external;
 
     /**
      * generate a request Id - unique identifier for this request.
      * the request ID is a hash over the content of the userOp (except the signature), the entrypoint and the chainid.
      */
-    function getUserOpHash(UserOperation calldata userOp) external view returns (bytes32);
+    function getUserOpHash(UserOperation calldata userOp)
+        external
+        view
+        returns (bytes32);
 
     /**
      * Simulate a call to account.validateUserOp and paymaster.validatePaymasterUserOp.
@@ -731,7 +867,12 @@ interface IEntryPoint is IStakeManager, INonceManager {
      *        are set to the return from that call.
      * @param targetCallData callData to pass to target address
      */
-    function simulateHandleOp(UserOperation calldata op, address target, bytes calldata targetCallData) external;
+    function simulateHandleOp(
+        UserOperation calldata op,
+        address target,
+        bytes calldata targetCallData
+    )
+        external;
 }
 
 /**
@@ -743,7 +884,9 @@ interface IEntryPoint is IStakeManager, INonceManager {
 interface IEpochWallet is IAccount {
     function owner() external returns (address);
 
-    event EpochWalletInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event EpochWalletInitialized(
+        IEntryPoint indexed entryPoint, address indexed owner
+    );
 
     function entryPoint() external view returns (IEntryPoint);
 
@@ -755,22 +898,35 @@ interface IEpochWallet is IAccount {
     /**
      * execute a transaction (called directly from owner, or by entryPoint)
      */
-    function execute(address dest, uint256 value, bytes calldata func) external;
+    function execute(address dest, uint256 value, bytes calldata func)
+        external;
 
     /**
      * execute a transaction from epoch protocol
      */
-    function executeEpoch(uint256 taskId, address dest, uint256 value, bytes calldata func) external;
+    function executeEpoch(
+        uint256 taskId,
+        address dest,
+        uint256 value,
+        bytes calldata func
+    )
+        external;
 
     /**
      * execute a sequence of transactions
      */
-    function executeBatch(address[] calldata dest, bytes[] calldata func) external;
+    function executeBatch(address[] calldata dest, bytes[] calldata func)
+        external;
 
     /**
      * execute a sequence of transactions from epoch protocol
      */
-    function executeBatchEpoch(uint256 taskId, address[] calldata dest, bytes[] calldata func) external;
+    function executeBatchEpoch(
+        uint256 taskId,
+        address[] calldata dest,
+        bytes[] calldata func
+    )
+        external;
 
     /**
      * @dev The _entryPoint member is immutable, to reduce gas consumption.  To upgrade EntryPoint,
@@ -794,7 +950,8 @@ interface IEpochWallet is IAccount {
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) external;
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount)
+        external;
 
     function updateRegistry(IEpochRegistry _registry) external;
 }
@@ -854,7 +1011,11 @@ library Math {
      * @dev Original credit to Remco Bloemen under MIT license (https://xn--2-umb.com/21/muldiv)
      * with further edits by Uniswap Labs also under MIT license.
      */
-    function mulDiv(uint256 x, uint256 y, uint256 denominator) internal pure returns (uint256 result) {
+    function mulDiv(uint256 x, uint256 y, uint256 denominator)
+        internal
+        pure
+        returns (uint256 result)
+    {
         unchecked {
             // 512-bit multiply [prod1 prod0] = x * y. Compute the product mod 2^256 and mod 2^256 - 1, then use
             // use the Chinese Remainder Theorem to reconstruct the 512 bit result. The result is stored in two 256
@@ -938,7 +1099,16 @@ library Math {
     /**
      * @notice Calculates x * y / denominator with full precision, following the selected rounding direction.
      */
-    function mulDiv(uint256 x, uint256 y, uint256 denominator, Rounding rounding) internal pure returns (uint256) {
+    function mulDiv(
+        uint256 x,
+        uint256 y,
+        uint256 denominator,
+        Rounding rounding
+    )
+        internal
+        pure
+        returns (uint256)
+    {
         uint256 result = mulDiv(x, y, denominator);
         if (rounding == Rounding.Up && mulmod(x, y, denominator) > 0) {
             result += 1;
@@ -987,7 +1157,11 @@ library Math {
     /**
      * @notice Calculates sqrt(a), following the selected rounding direction.
      */
-    function sqrt(uint256 a, Rounding rounding) internal pure returns (uint256) {
+    function sqrt(uint256 a, Rounding rounding)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
             uint256 result = sqrt(a);
             return result + (rounding == Rounding.Up && result * result < a ? 1 : 0);
@@ -1040,7 +1214,11 @@ library Math {
      * @dev Return the log in base 2, following the selected rounding direction, of a positive value.
      * Returns 0 if given 0.
      */
-    function log2(uint256 value, Rounding rounding) internal pure returns (uint256) {
+    function log2(uint256 value, Rounding rounding)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
             uint256 result = log2(value);
             return result + (rounding == Rounding.Up && 1 << result < value ? 1 : 0);
@@ -1089,10 +1267,15 @@ library Math {
      * @dev Return the log in base 10, following the selected rounding direction, of a positive value.
      * Returns 0 if given 0.
      */
-    function log10(uint256 value, Rounding rounding) internal pure returns (uint256) {
+    function log10(uint256 value, Rounding rounding)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
             uint256 result = log10(value);
-            return result + (rounding == Rounding.Up && 10 ** result < value ? 1 : 0);
+            return result
+                + (rounding == Rounding.Up && 10 ** result < value ? 1 : 0);
         }
     }
 
@@ -1132,10 +1315,15 @@ library Math {
      * @dev Return the log in base 256, following the selected rounding direction, of a positive value.
      * Returns 0 if given 0.
      */
-    function log256(uint256 value, Rounding rounding) internal pure returns (uint256) {
+    function log256(uint256 value, Rounding rounding)
+        internal
+        pure
+        returns (uint256)
+    {
         unchecked {
             uint256 result = log256(value);
-            return result + (rounding == Rounding.Up && 1 << (result << 3) < value ? 1 : 0);
+            return result
+                + (rounding == Rounding.Up && 1 << (result << 3) < value ? 1 : 0);
         }
     }
 }
@@ -1217,7 +1405,9 @@ library Strings {
      * @dev Converts a `int256` to its ASCII `string` decimal representation.
      */
     function toString(int256 value) internal pure returns (string memory) {
-        return string(abi.encodePacked(value < 0 ? "-" : "", toString(SignedMath.abs(value))));
+        return string(
+            abi.encodePacked(value < 0 ? "-" : "", toString(SignedMath.abs(value)))
+        );
     }
 
     /**
@@ -1232,7 +1422,11 @@ library Strings {
     /**
      * @dev Converts a `uint256` to its ASCII `string` hexadecimal representation with fixed length.
      */
-    function toHexString(uint256 value, uint256 length) internal pure returns (string memory) {
+    function toHexString(uint256 value, uint256 length)
+        internal
+        pure
+        returns (string memory)
+    {
         bytes memory buffer = new bytes(2 * length + 2);
         buffer[0] = "0";
         buffer[1] = "x";
@@ -1254,7 +1448,11 @@ library Strings {
     /**
      * @dev Returns true if the two strings are equal.
      */
-    function equal(string memory a, string memory b) internal pure returns (bool) {
+    function equal(string memory a, string memory b)
+        internal
+        pure
+        returns (bool)
+    {
         return keccak256(bytes(a)) == keccak256(bytes(b));
     }
 }
@@ -1306,7 +1504,11 @@ library ECDSA {
      *
      * _Available since v4.3._
      */
-    function tryRecover(bytes32 hash, bytes memory signature) internal pure returns (address, RecoverError) {
+    function tryRecover(bytes32 hash, bytes memory signature)
+        internal
+        pure
+        returns (address, RecoverError)
+    {
         if (signature.length == 65) {
             bytes32 r;
             bytes32 s;
@@ -1339,7 +1541,11 @@ library ECDSA {
      * this is by receiving a hash of the original message (which may otherwise
      * be too long), and then calling {toEthSignedMessageHash} on it.
      */
-    function recover(bytes32 hash, bytes memory signature) internal pure returns (address) {
+    function recover(bytes32 hash, bytes memory signature)
+        internal
+        pure
+        returns (address)
+    {
         (address recovered, RecoverError error) = tryRecover(hash, signature);
         _throwError(error);
         return recovered;
@@ -1352,8 +1558,15 @@ library ECDSA {
      *
      * _Available since v4.3._
      */
-    function tryRecover(bytes32 hash, bytes32 r, bytes32 vs) internal pure returns (address, RecoverError) {
-        bytes32 s = vs & bytes32(0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff);
+    function tryRecover(bytes32 hash, bytes32 r, bytes32 vs)
+        internal
+        pure
+        returns (address, RecoverError)
+    {
+        bytes32 s = vs
+            & bytes32(
+                0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+            );
         uint8 v = uint8((uint256(vs) >> 255) + 27);
         return tryRecover(hash, v, r, s);
     }
@@ -1363,7 +1576,11 @@ library ECDSA {
      *
      * _Available since v4.2._
      */
-    function recover(bytes32 hash, bytes32 r, bytes32 vs) internal pure returns (address) {
+    function recover(bytes32 hash, bytes32 r, bytes32 vs)
+        internal
+        pure
+        returns (address)
+    {
         (address recovered, RecoverError error) = tryRecover(hash, r, vs);
         _throwError(error);
         return recovered;
@@ -1375,7 +1592,11 @@ library ECDSA {
      *
      * _Available since v4.3._
      */
-    function tryRecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal pure returns (address, RecoverError) {
+    function tryRecover(bytes32 hash, uint8 v, bytes32 r, bytes32 s)
+        internal
+        pure
+        returns (address, RecoverError)
+    {
         // EIP-2 still allows signature malleability for ecrecover(). Remove this possibility and make the signature
         // unique. Appendix F in the Ethereum Yellow paper (https://ethereum.github.io/yellowpaper/paper.pdf), defines
         // the valid range for s in (301): 0 < s < secp256k1n ÷ 2 + 1, and for v in (302): v ∈ {27, 28}. Most
@@ -1385,7 +1606,10 @@ library ECDSA {
         // with 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141 - s1 and flip v from 27 to 28 or
         // vice versa. If your library also generates signatures with 0/1 for v instead 27/28, add 27 to v to accept
         // these malleable signatures as well.
-        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+        if (
+            uint256(s)
+                > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0
+        ) {
             return (address(0), RecoverError.InvalidSignatureS);
         }
 
@@ -1402,7 +1626,11 @@ library ECDSA {
      * @dev Overload of {ECDSA-recover} that receives the `v`,
      * `r` and `s` signature fields separately.
      */
-    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal pure returns (address) {
+    function recover(bytes32 hash, uint8 v, bytes32 r, bytes32 s)
+        internal
+        pure
+        returns (address)
+    {
         (address recovered, RecoverError error) = tryRecover(hash, v, r, s);
         _throwError(error);
         return recovered;
@@ -1416,7 +1644,11 @@ library ECDSA {
      *
      * See {recover}.
      */
-    function toEthSignedMessageHash(bytes32 hash) internal pure returns (bytes32 message) {
+    function toEthSignedMessageHash(bytes32 hash)
+        internal
+        pure
+        returns (bytes32 message)
+    {
         // 32 is the length in bytes of hash,
         // enforced by the type signature above
         /// @solidity memory-safe-assembly
@@ -1435,8 +1667,16 @@ library ECDSA {
      *
      * See {recover}.
      */
-    function toEthSignedMessageHash(bytes memory s) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n", Strings.toString(s.length), s));
+    function toEthSignedMessageHash(bytes memory s)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(
+            abi.encodePacked(
+                "\x19Ethereum Signed Message:\n", Strings.toString(s.length), s
+            )
+        );
     }
 
     /**
@@ -1448,7 +1688,11 @@ library ECDSA {
      *
      * See {recover}.
      */
-    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash) internal pure returns (bytes32 data) {
+    function toTypedDataHash(bytes32 domainSeparator, bytes32 structHash)
+        internal
+        pure
+        returns (bytes32 data)
+    {
         /// @solidity memory-safe-assembly
         assembly {
             let ptr := mload(0x40)
@@ -1465,7 +1709,14 @@ library ECDSA {
      *
      * See {recover}.
      */
-    function toDataWithIntendedValidatorHash(address validator, bytes memory data) internal pure returns (bytes32) {
+    function toDataWithIntendedValidatorHash(
+        address validator,
+        bytes memory data
+    )
+        internal
+        pure
+        returns (bytes32)
+    {
         return keccak256(abi.encodePacked("\x19\x00", validator, data));
     }
 }
@@ -1481,7 +1732,11 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function getFixedData(bytes calldata data, uint256 position) external pure returns (bytes32) {
+    function getFixedData(bytes calldata data, uint256 position)
+        external
+        pure
+        returns (bytes32)
+    {
         uint256 initialPosition = position * byteLength;
         uint256 endingPosition = initialPosition + byteLength;
         return bytes32(data[initialPosition:endingPosition]);
@@ -1494,10 +1749,15 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function getDynamicData(bytes calldata data, uint256 position) external pure returns (bytes memory) {
+    function getDynamicData(bytes calldata data, uint256 position)
+        external
+        pure
+        returns (bytes memory)
+    {
         uint256 initialPosition = (position * byteLength);
         uint256 endingPosition = initialPosition + byteLength;
-        uint256 dataPosition = uint256(bytes32(data[initialPosition:endingPosition]));
+        uint256 dataPosition =
+            uint256(bytes32(data[initialPosition:endingPosition]));
 
         uint256 dataStart = dataPosition;
 
@@ -1533,7 +1793,8 @@ library ByteManipulationLibrary {
         {
             uint256 initialPosition = (position * byteLength);
             uint256 endingPosition = initialPosition + byteLength;
-            dataPosition = uint256(bytes32(data[initialPosition:endingPosition]));
+            dataPosition =
+                uint256(bytes32(data[initialPosition:endingPosition]));
             anchor = dataPosition;
             dataPositionEnd = dataPosition + byteLength;
             offset = uint256(bytes32(data[dataPosition:dataPositionEnd]));
@@ -1564,10 +1825,15 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function getStaticArrayData(bytes calldata data, uint256 position) external pure returns (bytes[] memory) {
+    function getStaticArrayData(bytes calldata data, uint256 position)
+        external
+        pure
+        returns (bytes[] memory)
+    {
         uint256 initialPosition = (position * byteLength);
         uint256 endingPosition = initialPosition + byteLength;
-        uint256 dataPosition = uint256(bytes32(data[initialPosition:endingPosition]));
+        uint256 dataPosition =
+            uint256(bytes32(data[initialPosition:endingPosition]));
 
         uint256 dataStart = dataPosition;
 
@@ -1592,7 +1858,10 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function getDynamicSizeDynamicArrayData(bytes calldata data, uint256 position)
+    function getDynamicSizeDynamicArrayData(
+        bytes calldata data,
+        uint256 position
+    )
         external
         pure
         returns (bytes[] memory)
@@ -1609,9 +1878,11 @@ library ByteManipulationLibrary {
             uint256 initialPosition = (position * byteLength);
             uint256 endingPosition = initialPosition + byteLength;
 
-            uint256 lengthValueStart = uint256(bytes32(data[initialPosition:endingPosition]));
+            uint256 lengthValueStart =
+                uint256(bytes32(data[initialPosition:endingPosition]));
             uint256 lengthValueEnd = lengthValueStart + byteLength;
-            arrayElements = uint256(bytes32(data[lengthValueStart:lengthValueEnd]));
+            arrayElements =
+                uint256(bytes32(data[lengthValueStart:lengthValueEnd]));
             dataPosition = lengthValueEnd;
             dataPositionEnd = dataPosition + byteLength;
             anchor = lengthValueEnd;
@@ -1643,7 +1914,11 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function overwriteStaticDataWithSignature(bytes calldata data, bytes32 dataToOverwrite, uint32 position)
+    function overwriteStaticDataWithSignature(
+        bytes calldata data,
+        bytes32 dataToOverwrite,
+        uint32 position
+    )
         external
         pure
         returns (bytes memory)
@@ -1664,7 +1939,11 @@ library ByteManipulationLibrary {
      * @return returns bytes of extracted data.
      *
      */
-    function overwriteStaticDataWithoutSignature(bytes calldata data, bytes32 dataToOverwrite, uint32 position)
+    function overwriteStaticDataWithoutSignature(
+        bytes calldata data,
+        bytes32 dataToOverwrite,
+        uint32 position
+    )
         external
         pure
         returns (bytes memory)
@@ -1684,7 +1963,8 @@ contract EpochRegistry is IEpochRegistry {
     using ByteManipulationLibrary for bytes;
 
     bytes4 private constant _EXECUTE_EPOCH_SELECTOR = bytes4(uint32(0x0b1aee18));
-    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR = bytes4(uint32(0xa42d15f4));
+    bytes4 private constant _EXECUTE_EPOCH_BATCH_SELECTOR =
+        bytes4(uint32(0xa42d15f4));
 
     uint256 taskIdCounter = 1;
     uint256 executionWindowCounter = 1;
@@ -1716,14 +1996,24 @@ contract EpochRegistry is IEpochRegistry {
         OnChainCondition memory onChainCondition,
         DataSource memory dataSource,
         address[] memory destinations
-    ) public returns (uint256) {
+    )
+        public
+        returns (uint256)
+    {
         require(
-            executionWindowCondition.useExecutionWindow || onChainCondition.useOnChainCondition,
+            executionWindowCondition.useExecutionWindow
+                || onChainCondition.useOnChainCondition,
             "Registry: no condition provided"
         );
         if (isBatchTransaction) {
-            require(destinations.length > 0, "Registry: Batch Transactions need destinations");
-            require(dataSource.useDataSource == false, "Registry: batch transactions can not use external data source");
+            require(
+                destinations.length > 0,
+                "Registry: Batch Transactions need destinations"
+            );
+            require(
+                dataSource.useDataSource == false,
+                "Registry: batch transactions can not use external data source"
+            );
         } else {
             require(destination != address(0), "Registry: Invalid destination");
         }
@@ -1739,9 +2029,12 @@ contract EpochRegistry is IEpochRegistry {
         });
         taskIdCounter++;
         if (executionWindowCondition.useExecutionWindow) {
-            executionWindowMapping[executionWindowCounter] = executionWindowCondition;
+            executionWindowMapping[executionWindowCounter] =
+                executionWindowCondition;
             task.timeConditionId = executionWindowCounter;
-            emit NewExecutionWindow(executionWindowCounter, executionWindowCondition);
+            emit NewExecutionWindow(
+                executionWindowCounter, executionWindowCondition
+                );
             executionWindowCounter++;
         } else if (onChainCondition.useOnChainCondition) {
             onChainConditionMapping[onChainConditionCounter] = onChainCondition;
@@ -1762,55 +2055,98 @@ contract EpochRegistry is IEpochRegistry {
         return task.taskId;
     }
 
-    function verifyTransaction(uint256 taskId, UserOperation calldata userOperation) external returns (bool _send) {
+    function verifyTransaction(
+        uint256 taskId,
+        UserOperation calldata userOperation
+    )
+        external
+        returns (bool _send)
+    {
         require(taskStatus[taskId] == false, "Registry: task already executed");
         bytes32 hash = userOperation.hashWithoutNonce().toEthSignedMessageHash();
         Task memory task = taskMapping[taskId];
         IEpochWallet wallet = IEpochWallet(payable(msg.sender));
         address owner = wallet.owner();
         require(task.taskOwner == msg.sender, "Registry: No the task owner");
-        require(owner == hash.recover(userOperation.signature), "Registry: Invalid Signature");
+        require(
+            owner == hash.recover(userOperation.signature),
+            "Registry: Invalid Signature"
+        );
         bytes4 selector = bytes4(userOperation.callData[:4]);
         if (task.isBatchTransaction) {
-            require(selector == _EXECUTE_EPOCH_BATCH_SELECTOR, "Registry: Transaction not batch transaction");
-            (, address[] memory dest,,) =
-                abi.decode(userOperation.callData[4:], (uint256, address[], uint256[], bytes[]));
+            require(
+                selector == _EXECUTE_EPOCH_BATCH_SELECTOR,
+                "Registry: Transaction not batch transaction"
+            );
+            (, address[] memory dest,,) = abi.decode(
+                userOperation.callData[4:],
+                (uint256, address[], uint256[], bytes[])
+            );
             require(
                 keccak256(abi.encode(task.destinations)) == keccak256(abi.encode(dest)),
                 "Registry: Invalid Destiantion Array"
             );
         } else {
-            require(selector == _EXECUTE_EPOCH_SELECTOR, "Registry: Invalid Function Call");
-            (, address dest,,) = abi.decode(userOperation.callData[4:], (uint256, address, uint256, bytes));
+            require(
+                selector == _EXECUTE_EPOCH_SELECTOR,
+                "Registry: Invalid Function Call"
+            );
+            (, address dest,,) = abi.decode(
+                userOperation.callData[4:], (uint256, address, uint256, bytes)
+            );
 
             require(task.destination == dest, "Registry: Invalid Destination");
         }
         //check condition
         if (task.timeConditionId != 0) {
-            ExecutionWindow memory timeCondition = executionWindowMapping[task.timeConditionId];
-            require(timeCondition.executionWindowStart < block.timestamp, "Registry: Time start Condition Failiure");
-            require(timeCondition.executionWindowEnd > block.timestamp, "Registry: Time end Condition Failiure");
+            ExecutionWindow memory timeCondition =
+                executionWindowMapping[task.timeConditionId];
+            require(
+                timeCondition.executionWindowStart < block.timestamp,
+                "Registry: Time start Condition Failiure"
+            );
+            require(
+                timeCondition.executionWindowEnd > block.timestamp,
+                "Registry: Time end Condition Failiure"
+            );
         } else if (task.onChainConditionId != 0) {
-            OnChainCondition memory onChainCondition = onChainConditionMapping[task.onChainConditionId];
-            bool _onChainConditionStatus = _checkOnChainCondition(onChainCondition);
-            require(_onChainConditionStatus, "Registry: On-chain Condition Failed");
+            OnChainCondition memory onChainCondition =
+                onChainConditionMapping[task.onChainConditionId];
+            bool _onChainConditionStatus =
+                _checkOnChainCondition(onChainCondition);
+            require(
+                _onChainConditionStatus, "Registry: On-chain Condition Failed"
+            );
         }
 
         _send = true;
     }
 
-    function _checkOnChainCondition(OnChainCondition memory onChainCondition) internal returns (bool) {
-        (bool success, bytes memory response) = onChainCondition.dataSource.call(onChainCondition.encodedQuery);
+    function _checkOnChainCondition(OnChainCondition memory onChainCondition)
+        internal
+        returns (bool)
+    {
+        (bool success, bytes memory response) =
+            onChainCondition.dataSource.call(onChainCondition.encodedQuery);
         require(success, "Registry: Invalid OnChainCondition");
-        return onChainCondition.conditionChecker.checkCondition(onChainCondition.encodedCondition, response);
+        return onChainCondition.conditionChecker.checkCondition(
+            onChainCondition.encodedCondition, response
+        );
     }
 
-    function processTransaction(uint256 taskId, address dest, uint256 value, bytes calldata func)
+    function processTransaction(
+        uint256 taskId,
+        address dest,
+        uint256 value,
+        bytes calldata func
+    )
         external
         returns (bool _send, address _dest, uint256 _value, bytes memory _func)
     {
         require(taskStatus[taskId] == false, "Registry: Task already executed");
-        require(taskMapping[taskId].taskId == taskId, "Registry: Task does not exist");
+        require(
+            taskMapping[taskId].taskId == taskId, "Registry: Task does not exist"
+        );
 
         Task memory task = taskMapping[taskId];
         _func = func;
@@ -1823,9 +2159,11 @@ contract EpochRegistry is IEpochRegistry {
         _dest = dest;
         _value = value;
         //updated taskID here
-        ExecutionWindow memory executionWindow = executionWindowMapping[task.timeConditionId];
+        ExecutionWindow memory executionWindow =
+            executionWindowMapping[task.timeConditionId];
         if (executionWindow.recurring) {
-            executionWindow.executionWindowStart += executionWindow.recurrenceGap;
+            executionWindow.executionWindowStart +=
+                executionWindow.recurrenceGap;
             executionWindow.executionWindowEnd += executionWindow.recurrenceGap;
             executionWindowMapping[task.timeConditionId] = executionWindow;
         } else {
@@ -1834,12 +2172,17 @@ contract EpochRegistry is IEpochRegistry {
         emit TaskProcessed(taskId);
     }
 
-    function _fetchData(DataSource memory dataSource, bytes memory _func) internal returns (bytes memory) {
-        (bool status, bytes memory response) = dataSource.dataSource.call(dataSource.encodedQuery);
+    function _fetchData(DataSource memory dataSource, bytes memory _func)
+        internal
+        returns (bytes memory)
+    {
+        (bool status, bytes memory response) =
+            dataSource.dataSource.call(dataSource.encodedQuery);
         require(status, "Registry: data fetch failed");
         bytes32 dataToOverwrite = response.getFixedData(dataSource.dataPosition);
-        bytes memory overwrittenData =
-            _func.overwriteStaticDataWithSignature(dataToOverwrite, dataSource.positionInCallData);
+        bytes memory overwrittenData = _func.overwriteStaticDataWithSignature(
+            dataToOverwrite, dataSource.positionInCallData
+        );
         return overwrittenData;
     }
 
@@ -1848,7 +2191,15 @@ contract EpochRegistry is IEpochRegistry {
         address[] calldata dest,
         uint256[] calldata values,
         bytes[] calldata func
-    ) external returns (bool _send, address[] memory _dest, uint256[] memory _values, bytes[] memory _func) {
+    )
+        external
+        returns (
+            bool _send,
+            address[] memory _dest,
+            uint256[] memory _values,
+            bytes[] memory _func
+        )
+    {
         require(taskStatus[taskId] == false, "Registry: Task already executed");
         Task memory task = taskMapping[taskId];
         require(task.taskId == taskId, "Registry: Task does not exist");
@@ -1860,9 +2211,11 @@ contract EpochRegistry is IEpochRegistry {
 
         //updated taskID here
 
-        ExecutionWindow memory executionWindow = executionWindowMapping[task.timeConditionId];
+        ExecutionWindow memory executionWindow =
+            executionWindowMapping[task.timeConditionId];
         if (executionWindow.recurring) {
-            executionWindow.executionWindowStart += executionWindow.recurrenceGap;
+            executionWindow.executionWindowStart +=
+                executionWindow.recurrenceGap;
             executionWindow.executionWindowEnd += executionWindow.recurrenceGap;
             executionWindowMapping[task.timeConditionId] = executionWindow;
         } else {
